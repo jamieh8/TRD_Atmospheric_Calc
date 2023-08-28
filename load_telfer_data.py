@@ -24,7 +24,7 @@ ds = xr.DataArray(data[:, 1:], coords={'wavenumber': data[:,0],
 
 # converting wavenumber to wavelength: just 1/wavenumber. But also need to adjust flux/radiance since these
 # are per cm-1 (Jacobian transformation)
-ds_wl = 1e-4*ds*(ds['wavenumber'])**2 # [W.cm-2/cm-1]*[cm-1]^2 --> [W.cm-2/cm] --> *1e-4 --> [W.cm-2/um]
+ds_wl = 1e-4*ds*(ds['wavenumber'])**2  # [W.cm-2/cm-1]*[cm-1]^2 --> [W.cm-2/cm] --> *1e-4 --> [W.cm-2/um]
 ds_wl = ds_wl.rename({'wavenumber': 'wavelength'})
 ds_wl.coords['wavelength'] = 1e4/ds_wl.coords['wavelength'] # 1/[cm-1] = [cm] --> *1e4 --> [um]
 
@@ -48,8 +48,8 @@ for li, label in enumerate(['downwelling_53', 'downwelling_flux']):
     # plot in [W.m-2/um]
 
 #test function
-dwf_dict = retrieve_downwelling_flux(cwv, in_wavelength=True)
-axs[1][2].plot(dwf_dict['wavelengths'], dwf_dict['downwelling flux'], color='black')
+# dwf_dict = retrieve_downwelling_in_Wm2(cwv, in_wavelength=True)
+# axs[1][2].plot(dwf_dict['wavelengths'], dwf_dict['downwelling flux'], color='black')
 
 rad_units = '$\mathrm{W.cm^{-2}.sr^{-1}}$'
 pd_units = '$\mathrm{W.cm^{-2}}$'
