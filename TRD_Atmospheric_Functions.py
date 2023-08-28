@@ -80,7 +80,45 @@ def retrieve_downwelling_in_particleflux(cwv=10):
 
 
 
+def planck_dist(Eph, mu, kT):
+    return Eph**2/(np.exp((Eph-mu)/kT)-1)
 
+def planck_heaviside_dist(Eph, Eg, mu, kT):
+    hvs_weight = np.heaviside(Eph-Eg, 0.5)
+    pd_ys = planck_dist(Eph, mu, kT)
+    return pd_ys*hvs_weight
 
+def spec_pflux_planckheaviside(Ephs, Eg, mu, kT):
+    return ((2 * np.pi) / (c ** 2 * (h / q) ** 3)) * planck_heaviside_dist(Ephs, Eg, mu, kT)
+
+def Ndot_boltzmann(Eg, T, mu): # particle flux density
+    # accurate for large band gaps / large negative bias
+    kT = kb*T/q # convert to eV to match units of Eg
+    N = ((2*np.pi)/(c**2*h**3))*np.exp((mu-Eg)/kT)*kT*(Eg**2 + 2*Eg*kT + 2*kT**2)
+    # paper above, eq. 13
+    return N*q**3
+
+def Ndot_planckheaviside(Ephs, Eg, mu, kT):
+    spec_pflux = spec_pflux_planckheaviside(Ephs, Eg, mu, kT)
+    pflux = np.trapz(spec_pflux, Ephs)
+    return pflux
+
+def Ndot_downwellheaviside(Eg, downwell_dict):
+    Ephs = downwell_dict['photon energies']
+    get_heavisided = np.heaviside(Ephs - Eg, 0.5) * downwell_dict['downwelling photon flux']
+    pflux = np.trapz(get_heavisided, Ephs)
+    return pflux
+
+def neg_powerdensity_downwellheaviside(mu, Eg, Ephs_p, kT_converter, downwell_dict):
+    Ndot_in = Ndot_downwellheaviside(Eg, downwell_dict)
+    Ndot_out = Ndot_planckheaviside(Ephs_p, Eg, mu, kT_converter)
+    J = q*(Ndot_out-Ndot_in)
+    return mu*J
+
+def neg_powerdensity_plancks(mu, Eg, Ephs, kT_convert, kT_env):
+    Ndot_out = Ndot_planckheaviside(Ephs, Eg, mu, kT_convert)
+    Ndot_in = Ndot_planckheaviside(Ephs, Eg, 0, kT_env)
+    J = q * (Ndot_out - Ndot_in)
+    return mu * J
 
 
