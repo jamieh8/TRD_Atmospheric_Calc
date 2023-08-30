@@ -3,8 +3,6 @@ import os
 import xarray as xr
 from solcore.constants import kb, c, h, q
 
-def planck_dist(Eph, mu, kT):
-    return Eph**2/(np.exp((Eph-mu)/kT)-1)
 
 def load_file_as_xarray(cwv = 10, convert_to_wavelength = True):
     filename = os.path.join('simulations_telfer', f'telfer_australia_cwv{cwv}.txt')
@@ -67,7 +65,7 @@ def retrieve_downwelling_in_particleflux(cwv=10):
     #             phot_energies_J * phot_energies_eV)  # [W.m-2.m-1]*[J.s][m.s-1]*[J-1][eV-1] --> [W.m-2/eV]
 
     # step 1 - convert from wavenumber to eV
-    dw_dict = retrieve_downwelling_in_Wm2(10, in_wavelength=False)  # [downwelling flux in W.m-2/m-1]
+    dw_dict = retrieve_downwelling_in_Wm2(cwv, in_wavelength=False)  # [downwelling flux in W.m-2/m-1]
     phot_energies_J = h * c * (dw_dict['wavenumbers'])  # E = hf = hc v, [m-1]*[m.s-1][J.s] --> [J]
     phot_energies_eV = phot_energies_J / q  # [J] --> [eV]
     dwf_W = dw_dict['downwelling flux'] / (
@@ -81,21 +79,33 @@ def retrieve_downwelling_in_particleflux(cwv=10):
 
 
 def planck_dist(Eph, mu, kT):
-    return Eph**2/(np.exp((Eph-mu)/kT)-1)
+    '''
+    :param Eph: Particular photon energy, in eV
+    :param mu: Fermi level splitting, in eV
+    :param kT: in eV
+    :return: Photon flux [s-1.m-2] for the given eV, calculated using generalized Planck's law (blackbody with temp T if mu=0).
+    '''
+    return ((2*np.pi)/(c**2*(h/q)**3))* Eph**2/(np.exp((Eph-mu)/kT)-1)
 
-def planck_heaviside_dist(Eph, Eg, mu, kT):
+def spec_pflux_planckheaviside(Eph, Eg, mu, kT):
+    '''
+    Photon density flux calculated for using Planck's law for a semiconductor with Eg, at temp T and Fermi level split mu.
+    Uses Heaviside weighing (i.e. 100% emission above Eg, 0 below Eg)
+    :param Eph: Particular photon energy (or array) [eV]
+    :param Eg: Bandgap [eV]
+    :param mu: Fermi level splitting, [eV]
+    :param kT: k*temperature of emitting body [eV]
+    :return: Photon density flux [s-1.m-2] for the given eV. If Eph is an array, returns array of [s-1.m-2/eV] values.
+    '''
     hvs_weight = np.heaviside(Eph-Eg, 0.5)
     pd_ys = planck_dist(Eph, mu, kT)
     return pd_ys*hvs_weight
-
-def spec_pflux_planckheaviside(Ephs, Eg, mu, kT):
-    return ((2 * np.pi) / (c ** 2 * (h / q) ** 3)) * planck_heaviside_dist(Ephs, Eg, mu, kT)
 
 def Ndot_boltzmann(Eg, T, mu): # particle flux density
     # accurate for large band gaps / large negative bias
     kT = kb*T/q # convert to eV to match units of Eg
     N = ((2*np.pi)/(c**2*h**3))*np.exp((mu-Eg)/kT)*kT*(Eg**2 + 2*Eg*kT + 2*kT**2)
-    # paper above, eq. 13
+    #eq 13 from Pusch et al 2019
     return N*q**3
 
 def Ndot_planckheaviside(Ephs, Eg, mu, kT):
@@ -110,12 +120,14 @@ def Ndot_downwellheaviside(Eg, downwell_dict):
     return pflux
 
 def neg_powerdensity_downwellheaviside(mu, Eg, Ephs_p, kT_converter, downwell_dict):
-    Ndot_in = Ndot_downwellheaviside(Eg, downwell_dict)
+    # used to optimize over mu, with scipy
     Ndot_out = Ndot_planckheaviside(Ephs_p, Eg, mu, kT_converter)
+    Ndot_in = Ndot_downwellheaviside(Eg, downwell_dict)
     J = q*(Ndot_out-Ndot_in)
     return mu*J
 
 def neg_powerdensity_plancks(mu, Eg, Ephs, kT_convert, kT_env):
+    # used to optimize over mu, with scipy
     Ndot_out = Ndot_planckheaviside(Ephs, Eg, mu, kT_convert)
     Ndot_in = Ndot_planckheaviside(Ephs, Eg, 0, kT_env)
     J = q * (Ndot_out - Ndot_in)
