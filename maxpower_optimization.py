@@ -3,9 +3,9 @@ from TRD_Atmospheric_Functions import *
 from scipy.optimize import minimize_scalar
 
 
-Tc = 300  # temperature of emitter / converter
+# Tc = 300  # temperature of emitter / converter
 mu = 0
-kT_c_eV = kb * Tc / q
+kT_eV = kb / q
 
 Te = 30 # temperature of environment
 kT_e_eV = kb * Te / q
@@ -23,38 +23,38 @@ col_dict = {'planck_emit':'skyblue', 'planckheavy_emit':'darkblue', 'planck_env_
 
 
 # Comparing 3 cwvs
-plt.figure(1)
+# plt.figure(1)
 fig3, axs3 = plt.subplots(1,2, layout='tight')
 Egs_dw = np.arange(0.062, 0.20, 0.002)
 cwvs = [10,24,54]
-# maxPs = {'cwv10':[], 'cwv24':[], 'cwv54':[]}
-# Vmpps = {'cwv10':[], 'cwv24':[], 'cwv54':[]}
 cwv_cols = {10: 'deeppink', 24:'steelblue', 54:'seagreen'}
+cwv_temps = {10:296.724, 24:304.868, 54:303.512}
 
 for cwv in cwvs:
     pflux_downwell = retrieve_downwelling_in_particleflux(cwv)
-    plt.figure(1)
-    plt.plot(pflux_downwell['photon energies'], pflux_downwell['downwelling photon flux'], label=f'cwv {cwv}', c=cwv_cols[cwv])
+    # plt.figure(1)
+    # plt.plot(pflux_downwell['photon energies'], pflux_downwell['downwelling photon flux'], label=f'cwv {cwv}', c=cwv_cols[cwv])
 
     maxPs = []
     Vmpps = []
     for Eg in Egs_dw:
+        kT_c_eV = cwv_temps[cwv] * kT_eV
         opt_mu_dwh = minimize_scalar(neg_powerdensity_downwellheaviside, bounds=[-Eg, 0],
                                      args=(Eg, Ephs, kT_c_eV, pflux_downwell))
         maxPs += [opt_mu_dwh.fun]
         Vmpps += [opt_mu_dwh.x]
 
-    axs3[0].plot(Egs_dw, maxPs, label=f'300K out, cwv {cwv} in', c=cwv_cols[cwv])
-    axs3[1].plot(Egs_dw, Vmpps, label=f'300K out, cwv {cwv} in', c=cwv_cols[cwv])
+    axs3[0].plot(Egs_dw, maxPs, label=f'{cwv_temps[cwv]}K out, cwv {cwv} in', c=cwv_cols[cwv])
+    axs3[1].plot(Egs_dw, Vmpps, label=f'{cwv_temps[cwv]}K out, cwv {cwv} in', c=cwv_cols[cwv])
 
 
-plt.legend()
-plt.ylabel('Photons density flux [s$^{-1}$.m$^{-2}$/eV')
-plt.xlabel('Photon energy, E$_{ph}$ [eV]')
+# plt.legend()
+# plt.ylabel('Photons density flux [s$^{-1}$.m$^{-2}$/eV')
+# plt.xlabel('Photon energy, E$_{ph}$ [eV]')
 
 
 
-# Plotting max power density vs Eg
+# Plotting max power density vs Eg - cwv=10 compared to 30K, 100K blackbody environment
 # fig3, axs3 = plt.subplots(1,2, layout='tight')
 # # neg_powerdensity_downwellheaviside(mu, Eg, Ephs, kT_c_eV, pflux_downwell)
 # # find best mu for given Eg
@@ -98,9 +98,23 @@ axs3[0].legend()
 
 axs3[1].plot([-1,1],2*[-1*kT_c_eV], '--k')
 axs3[1].text(x=0.150, y=-kT_c_eV+0.0005, s='-kT$_c$')
-axs3[1].set_xlim([0,0.2])
+axs3[1].set_xlim([0.06,0.2])
 axs3[1].set_xlabel('Bangap, E$_g$ [eV]')
 axs3[1].set_ylabel('V$_{mpp}$ [V]')
 axs3[1].set_title('Optimal Voltage (V$_{mpp}$ vs Bandgap)')
+
+
+# check results from optimizer, at a particular Eg, cwv
+# plt.figure()
+# Eg = 0.075
+# pf_dw_cwv10 = retrieve_downwelling_in_particleflux(10)
+# mus = np.arange(-Eg, 10e-5, 0.001)
+# power_vs_mu = []
+# for mu in mus:
+#     power_vs_mu += [neg_powerdensity_downwellheaviside(mu, Eg, Ephs, kT_c_eV, pf_dw_cwv10)]
+# plt.plot(mus, power_vs_mu)
+#
+# opt_mu_dwh = minimize_scalar(neg_powerdensity_downwellheaviside, bounds=[-Eg, 0], args=(Eg, Ephs, kT_c_eV, pf_dw_cwv10))
+# plt.plot(opt_mu_dwh.x, opt_mu_dwh.fun, 'o')
 
 plt.show()
