@@ -26,7 +26,7 @@ def convert_from(array_in, units_in, units_out, corresponding_xs=None):
             return 1e-2 * array_in / (h*c/q)
             # [cm-1/m-1][Y/cm-1]/[J.s][m.s-1][eV/J] --> [Y/m-1]/[eV.m] --> [Y/eV]
 
-def load_file_as_xarray(cwv = 10):#, convert_to_wavelength = True):
+def load_file_as_xarray(cwv = 10):
     filename = os.path.join('simulations_telfer', f'telfer_australia_cwv{cwv}.txt')
     data = np.loadtxt(filename)
 
@@ -38,13 +38,6 @@ def load_file_as_xarray(cwv = 10):#, convert_to_wavelength = True):
     ]
     ds = xr.DataArray(data[:, 1:], coords={'wavenumber': data[:, 0],
                                            'column': column_labels[1:]}, dims=['wavenumber', 'column'])
-
-    # if convert_to_wavelength:
-    #     # converting wavenumber to wavelength: just 1/wavenumber. But also need to adjust flux/radiance since these
-    #     # are per cm-1 (Jacobian transformation)
-    #     ds = 1e-4 * ds * (ds['wavenumber']) ** 2  # [W.cm-2/cm-1]*[cm-1]^2 = [W.cm-2/cm] --> *1e-4 --> [W.cm-2/um]
-    #     ds = ds.rename({'wavenumber': 'wavelength'})
-    #     ds.coords['wavelength'] = 1e4 / ds.coords['wavelength']  # [1/cm-1]=[cm] ---> *1e4 --> [um]
 
     return ds
 
@@ -72,7 +65,7 @@ def retrieve_downwellingrad_as_nparray(cwv=10, x_vals = 'photon energies'):
     elif x_vals == 'photon energies':
         x_array = convert_from(wavnums, units_in='wavenumber [cm-1]', units_out='photon energy [eV]')
         dat_3D_per_um = convert_from(dat_3D, units_in='per wavenumber [/cm-1]', units_out='per photon energy [/eV]')   # [W.cm-2.sr-1/cm-1] --> [W.cm-2.sr-1/eV]
-        dat_3D_converted = 1e4 * dat_3D_per_um  # [W.m-2.sr-1/um]
+        dat_3D_converted = 1e4 * dat_3D_per_um  # [W.m-2.sr-1/eV]
 
     return {x_vals:x_array, 'downwelling rad':dat_3D_converted}
 
@@ -95,8 +88,8 @@ def retrieve_downwelling_in_Wm2(cwv = 10, in_wavelength = False):
                                                units_in='per wavenumber [/cm-1]', units_out='per wavelength [/um]',
                                                corresponding_xs = x_wavnums) # [W.cm-2/cm-1] --> [W.cm-2/um]
         downwelling_flux = 1e4 * downwelling_flux_cm2_um  # [W.cm-2/um] --> [W.m-2/um]
-        wavns = convert_from(x_wavnums, units_in='wavenumber [cm-1]', units_out='wavelength [um]')
-        return {'wavelengths': wavns, 'downwelling flux': downwelling_flux}  # {[um], [W.m-2/um]}
+        wls = convert_from(x_wavnums, units_in='wavenumber [cm-1]', units_out='wavelength [um]')
+        return {'wavelengths': wls, 'downwelling flux': downwelling_flux}  # {[um], [W.m-2/um]}
 
     else:  # in wavenumber
         downwelling_flux = 1e4 * d_xarray.sel(column='downwelling_flux')  # [W.cm-2/cm-1] --> [W.m-2/cm-1]
@@ -123,13 +116,27 @@ def retrieve_downwelling_in_particleflux(cwv=10):
     return {'photon energies':phot_energies_eV, 'downwelling photon flux':dwf_part}
 
 
+def interpolate_spectralrad_by_angle(cwv, x_vals = 'photon energies', number_of_angles = 100):
+    existing_dat = retrieve_downwellingrad_as_nparray(cwv, x_vals)
+    xs, dat_3D = existing_dat[x_vals], existing_dat['downwelling rad']  # [eV], [W.m-2/sr.eV] or [um], [W.m-2/sr.um]
+    angle_array = np.linspace(0, 90, number_of_angles)
+    dat_3D_int = []
+    for xi in range(len(xs)):
+        # for each wavelength, interpolate values for angles specified
+        dat_3D_int += [np.interp(x=angle_array, xp=[0, 53, 70], fp=dat_3D[:, xi])]
+
+    dat_3D_int = np.array(dat_3D_int)  # rows correspond to x values (photon energies or wavelengths)
+    dat_3D_int = dat_3D_int.transpose()  # rows correspond to angles
+
+    return {'angles (rows)':angle_array, f'{x_vals} (columns)':xs, 'int rad':dat_3D_int}
+
 
 def planck_dist(Eph, mu, kT):
     '''
     :param Eph: Particular photon energy, in eV
     :param mu: Fermi level splitting, in eV
     :param kT: in eV
-    :return: Photon flux [s-1.m-2] for the given eV, calculated using generalized Planck's law (blackbody with temp T if mu=0).
+    :return: Photon flux for the given eV, in [s-1.m-2.eV-1], calculated using generalized Planck's law (blackbody with temp T if mu=0).
     '''
     return ((2*np.pi)/(c**2*(h/q)**3))* Eph**2/(np.exp((Eph-mu)/kT)-1)
 

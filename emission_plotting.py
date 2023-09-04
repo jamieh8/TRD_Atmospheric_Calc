@@ -20,7 +20,7 @@ col_dict = {'planck_emit':'skyblue', 'planckheavy_emit':'darkblue', 'planck_env_
             'boltzmann_emit2':'springgreen', 'downwell_env':'lightpink', 'downwellheavy_env':'deeppink'}
 
 
-# Plot effect of mu on TRD emission
+# ------------ EFFECT OF MU ON TRD EMISSION CURVE ------------
 fig, axs = plt.subplots(1,1, layout='tight', sharey='all')
 
 Egs = np.arange(0.01, 0.20, 0.05)
@@ -32,7 +32,7 @@ ax = axs
 mu_spec = -0.025
 cmap = matplotlib.colormaps['plasma']
 for mi, mu in enumerate(mus):
-    spec_pflux_planck = ((2*np.pi)/(c**2*(h/q)**3))* planck_dist(Ephs, mu, kT_c_eV)  # [m-2.s-2/eV]
+    spec_pflux_planck = planck_dist(Ephs, mu, kT_c_eV)  # [m-2.s-2/eV]
 
     mu_colour = cmap(0.2 + 0.8 * mi / len(mus))
     ax.plot(Ephs, spec_pflux_planck, label=f'$\mu$ = {mu}', color=mu_colour)
@@ -60,20 +60,20 @@ ax.legend()
 # plt.ylabel('(Spectral) Photon Density Flux [$\mathrm{m^{-2}.s^{-1}.eV^{-1}}$]')
 #
 # plt.ylim([0,3.8*1e23])
-# plt.show()
+
 
 
 # Downwelling - W.m-2 vs Eph, to photon flux vs Eph
-# downwell_dat_dict = retrieve_downwelling_in_particleflux(10)
-# fig, axs = plt.subplots(1,2, layout='tight')
-# Ephs = downwell_dat_dict['photon energies']
-# axs[0].plot(Ephs, downwell_dat_dict['downwelling photon flux']*Ephs, c='crimson')
-# axs[1].plot(Ephs, downwell_dat_dict['downwelling photon flux'], c=col_dict['downwellheavy_env'])
-#
-# axs[0].set_xlabel('Photon Energy, E$_{ph}$ [eV]')
-# axs[1].set_xlabel('Photon Energy, E$_{ph}$ [eV]')
-# axs[0].set_ylabel('(Spectral) Power Density Flux [$\mathrm{W.m^{-2}/eV}$]')
-# axs[1].set_ylabel('(Spectral) Photon Density Flux [$\mathrm{m^{-2}.s^{-1}/eV}$]')
+downwell_dat_dict = retrieve_downwelling_in_particleflux(10)
+fig, axs = plt.subplots(1,2, layout='tight')
+Ephs = downwell_dat_dict['photon energies']
+axs[0].plot(Ephs, downwell_dat_dict['downwelling photon flux']*Ephs*q, c='crimson')  # [m-2.s-1/eV]*[eV]*[J/eV] --> [W.m-2/eV]
+axs[1].plot(Ephs, downwell_dat_dict['downwelling photon flux'], c=col_dict['downwellheavy_env'])
+
+axs[0].set_xlabel('Photon Energy, E$_{ph}$ [eV]')
+axs[1].set_xlabel('Photon Energy, E$_{ph}$ [eV]')
+axs[0].set_ylabel('(Spectral) Power Density Flux [$\mathrm{W.m^{-2}/eV}$]')
+axs[1].set_ylabel('(Spectral) Photon Density Flux [$\mathrm{m^{-2}.s^{-1}/eV}$]')
 
 
 plt.show()
