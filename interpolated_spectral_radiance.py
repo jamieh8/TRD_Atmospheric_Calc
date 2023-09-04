@@ -3,15 +3,9 @@ from TRD_Atmospheric_Functions import *
 
 fig, axs = plt.subplots(1,2, layout='tight')
 
-dat_xarray = load_file_as_xarray(cwv=10, convert_to_wavelength=True)
-# in wavelength [um], [W.cm-2.sr-1/um]
-
-dat_3D = []
-for col_head in ['downwelling_0', 'downwelling_53', 'downwelling_70']:
-    dat_3D += [1e4*dat_xarray.sel(column=col_head)]  # 1e4: [cm-2] --> [m-2]
-dat_3D = np.array(dat_3D)
-wavs = dat_xarray['wavelength']
-
+dwrad_dict = retrieve_downwellingrad_as_nparray(10, x_vals = 'wavelengths')
+wavs = dwrad_dict['wavelengths']
+dat_3D = dwrad_dict['downwelling rad']
 
 # interpolate data at different angles
 angle_array = np.linspace(0,90,10)
@@ -20,8 +14,9 @@ for wi in range(len(wavs)):
     # for each wavelength, interpolate values for angles specified
     dat_3D_int += [np.interp(x=angle_array, xp=[0,53,70], fp=dat_3D[:,wi])]
 
-dat_3D_int = np.array(dat_3D_int)  # rows correspond to angles
-dat_3D_int = dat_3D_int.transpose()  # rows correspond to wavelengths
+dat_3D_int = np.array(dat_3D_int)  # rows correspond to wavelengths
+dat_3D_int = dat_3D_int.transpose()  # rows correspond to angles
+
 
 # make heatmap
 h_ax = axs[0]
@@ -46,5 +41,11 @@ for si, swav in zip(s_idxs, slice_wavelengths):
 slice_ax.set_xlabel('Solid Angle [sr]')
 slice_ax.set_ylabel('Spectral Rad [$\mathrm{W.m^{-2}.sr^{-1}/um}$]')
 slice_ax.legend()
+
+
+# integrate
+
+
+
 
 plt.show()
