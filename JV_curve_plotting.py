@@ -22,7 +22,8 @@ kT_e_eV = kb * Te / q
 k_eV = kb/q
 
 cwv=10
-pflux_downwell = retrieve_downwelling_in_particleflux(cwv)
+atm_dataset = atmospheric_dataset(cwv)
+phot_flux_atm = atm_dataset.retrieve_spectral_array('s-1.m-2', 'eV', 'downwelling_flux')
 
 for ci, Egs in enumerate([Egs_planck, Egs_dw]):
     for iE, Eg in enumerate(Egs[::10]):
@@ -38,7 +39,7 @@ for ci, Egs in enumerate([Egs_planck, Egs_dw]):
             i_colour = cmap_orange(0.2 + 0.8 * iE / len(Egs[::10]))
         elif ci==1:
             # Downwelling modelling data
-            N_in_mu = Ndot_downwellheaviside(Eg, downwell_dict=pflux_downwell)
+            N_in_mu = Ndot_downwellheaviside(Eg, atm_dataset.photon_energies, phot_flux_atm)
             i_colour = cmap_pink(0.2 + 0.8 * iE / len(Egs[::10]))
 
         # calculate and plot with N abs from env from (1/orange) blackbody at T=30K, (2/pink) downwelling data

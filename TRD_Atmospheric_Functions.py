@@ -46,97 +46,71 @@ class atmospheric_dataset:
     def __init__(self, cwv):
         '''
         Loads in file as an xarray, with all original data values (i.e. no unit conversion), on initialization.
+        Calculate wavenumbers, wavelengths, and photon_energies. Save resulting 1D arrays as class properties.
         :param cwv: column water vapour, should be 10, 24, or 54.
         '''
         self.org_xarray = self.load_file_as_xarray(cwv)
 
-    def retrieve_downwelling_in_Wm2(self, in_wavelength=False):
-        '''
-        If in_wavelength is False, dict returned has keys 'wavenumbers' and 'downwelling flux'. Wavenumber in [cm-1], downwelling flux in [W.m-2/cm-1].
-        If in_wavelength is True, dict returned has keys 'wavelengths' and 'downwelling flux'. Wavelengths in [um], downwelling flux in [W.m-2/um]
+        self.wavenumbers = np.array(self.org_xarray['wavenumber'])
+        self.wavelengths = convert_from(self.wavenumbers, units_in='wavenumber [cm-1]', units_out='wavelength [um]')
+        self.photon_energies = convert_from(self.wavenumbers, units_in='wavenumber [cm-1]', units_out='photon energy [eV]')
 
-        :param cwv: column water vapor, in mm (either 10, 24 or 54 mm)
-        :param in_wavelength: boolean, determines whether downwelling flux is retrieved per wavenumber [cm-1] or per wavelength [um]
-        :return: dict with two 1D arrays, as determined by in_wavelength boolean.
-        '''
-        d_xarray = self.org_xarray
-        x_wavnums = d_xarray['wavenumber']
-
-        if in_wavelength:
-            downwelling_flux_cm2_um = convert_from(d_xarray.sel(column='downwelling_flux'),
-                                                   units_in='per wavenumber [/cm-1]', units_out='per wavelength [/um]',
-                                                   corresponding_xs=x_wavnums)  # [W.cm-2/cm-1] --> [W.cm-2/um]
-            downwelling_flux = 1e4 * downwelling_flux_cm2_um  # [W.cm-2/um] --> [W.m-2/um]
-            wls = convert_from(x_wavnums, units_in='wavenumber [cm-1]', units_out='wavelength [um]')
-            return {'wavelengths': wls, 'downwelling flux': downwelling_flux}  # {[um], [W.m-2/um]}
-
-        else:  # in wavenumber
-            downwelling_flux = 1e4 * d_xarray.sel(column='downwelling_flux')  # [W.cm-2/cm-1] --> [W.m-2/cm-1]
-            wavns = d_xarray['wavenumber']  # [cm-1]
-
-            return {'wavenumbers': wavns, 'downwelling flux': downwelling_flux}  # {[m-1], [W.m-2/m-1]}
-
-    def retrieve_downwelling_in_particleflux(self):
+    def retrieve_spectral_array(self, yvals = 'W.m-2', xvals = 'eV', col_name = 'downwelling_flux'):
         '''
 
-        :param cwv: column water vapour to retrieve, in mm (either 10, 24 or 54 mm)
-        :return: dict containing two 1D arrays, with keys 'photon energies' [in eV] and 'downwelling photon flux' [in W.m-2/eV]
+        :param yvals: Can be 'W.m-2', 's-1.m-2', or 'W.cm-2'. If string is not recognized, 'W.cm-2' is returned.
+        :param xvals: Can be 'cm-1', 'eV', 'um'. If string is not recognized, 'cm-1' is returned.
+        :param col_name: Can be 'downwelling_x' (with x = 0, 53, 70), 'downwelling_flux', 'upwelling_flux', 'net_flux'.
+        :return: 1D array of spectral data specified by col_name, in units specified by yvals and xvals strings.
         '''
+        new_array = self.org_xarray.sel(column=col_name)  # original values, in [W.cm-2.(sr-1)/cm-1]
+        # (sr-1) depends on whether flux (no sr-1) or radiance (0,53,70) (with sr-1) is selected
 
-        # step 1 - convert from wavenumber to eV
-        dw_dict = self.retrieve_downwelling_in_Wm2(in_wavelength=False)  # [downwelling flux in W.m-2/cm-1]
-        phot_energies_eV = convert_from(dw_dict['wavenumbers'], units_in='wavenumber [cm-1]',
-                                        units_out='photon energy [eV]')
-        dwf_W = convert_from(dw_dict['downwelling flux'], units_in='per wavenumber [/cm-1]',
-                             units_out='per photon energy [/eV]')
+        if yvals == 'W.m-2':
+            # convert cm-2 to m-2
+            new_array = new_array * 1e4  # [W.m-2.(sr-1)/cm-1]
+        elif yvals == 's-1.m-2':
+            new_array = new_array * 1e4 / (self.photon_energies * q)  #[W.m-2.(sr-1)/cm-1] / [eV][J/eV] --> [s-1.m-2.(sr-1)/cm-1]
 
-        # step 2 - convert from W to particles per second
-        dwf_part = dwf_W / (q * phot_energies_eV)  # [J.s-1.m-2/eV] / [J.eV-1][eV] --> [s-1.m-2/eV]
+        if xvals !='cm-1':
+            if xvals == 'eV':
+                units_out_str = 'per photon energy [/eV]'
+            elif xvals == 'um':
+                units_out_str = 'per wavelength [/um]'
+            new_array = convert_from(new_array,
+                                     units_in='per wavenumber [/cm-1]', units_out=units_out_str,
+                                     corresponding_xs=self.wavenumbers)
 
-        return {'photon energies': phot_energies_eV, 'downwelling photon flux': dwf_part}
+        return new_array
 
-    def retrieve_downwellingrad_as_nparray(self, x_vals='photon energies'):
-        '''
-        :param cwv: column water vapour. 10, 24, or 54
-        :param x_vals: string, either 'wavelengths' or 'photon energies', specifying x values of data returned.
-        :return: dict with keys x_vals (1D array of wavelengths in um) and 'downwelling rad' (2D array in [W.m-2.sr-1/um]). Rows are degrees. Columns correspond to wavelengths.
-        '''
-
-        wavnums = self.org_xarray['wavenumber']  # [cm-1]
-
-        dat_3D = []
-        for col_head in ['downwelling_0', 'downwelling_53', 'downwelling_70']:
-            dat_3D += [self.org_xarray.sel(column=col_head)]
-        dat_3D = np.array(dat_3D)  # [W.m-2.sr-1/um]
-
-        if x_vals == 'wavelengths':
-            x_array = convert_from(wavnums, units_in='wavenumber [cm-1]', units_out='wavelength [um]')
-            dat_3D_per_um = convert_from(dat_3D, units_in='per wavenumber [/cm-1]', units_out='per wavelength [/um]',
-                                         corresponding_xs=np.array(3 * [wavnums]))
-                                        # [W.cm-2.sr-1/cm-1] --> [W.cm-2.sr-1/um]
-            dat_3D_converted = 1e4 * dat_3D_per_um  # [W.m-2.sr-1/um]
-
-        elif x_vals == 'photon energies':
-            x_array = convert_from(wavnums, units_in='wavenumber [cm-1]', units_out='photon energy [eV]')
-            dat_3D_per_um = convert_from(dat_3D, units_in='per wavenumber [/cm-1]',
-                                         units_out='per photon energy [/eV]')  # [W.cm-2.sr-1/cm-1] --> [W.cm-2.sr-1/eV]
-            dat_3D_converted = 1e4 * dat_3D_per_um  # [W.m-2.sr-1/eV]
-
-
-        return {x_vals: np.array(x_array), 'downwelling rad': dat_3D_converted}
-
-
-    def interpolate_by_angle(self, dat_3D, angle_array):
-        # dat_3D in [W.m-2/sr.eV] or [/sr.um]
-        dat_3D_int = []
-        for xi in range(len(dat_3D[0])):
+    def interpolate_by_angle(self, dat_2D, angle_array):
+        # dat_2D in [W.m-2/sr.eV] or [/sr.um]
+        dat_2D_int = []
+        for xi in range(len(dat_2D[0])):
             # for each wavelength, interpolate values for angles specified
-            dat_3D_int += [np.interp(x=angle_array, xp=[0, 53, 70], fp=dat_3D[:, xi])]
+            dat_2D_int += [np.interp(x=angle_array, xp=[0, 53, 70], fp=dat_2D[:, xi])]
 
-        dat_3D_int = np.array(dat_3D_int)  # rows correspond to x values (photon energies or wavelengths)
-        dat_3D_int = dat_3D_int.transpose()  # rows correspond to angles
+        dat_2D_int = np.array(dat_2D_int)  # rows correspond to x values (photon energies or wavelengths)
+        dat_2D_int = dat_2D_int.transpose()  # rows correspond to angles
 
-        return dat_3D_int
+        return dat_2D_int
+
+    def retrieve_interpolated_angle_spectral_data(self, angle_array, yvals = 'W.m-2', xvals='eV', ):
+        '''
+
+        :param angle_array: 1D array of angles, in degrees, at which to interpolate the spectral data.
+        :param yvals: 'W.m-2' or 's-1.m-2'
+        :param xvals: 'cm-1', 'um', or 'eV'
+        :return: 2D numpy array, with values in [yvals.sr-1.xvals-1]. Rows correspond to angles in angle_array. Columns corresponds to wavelength/photon energy/...
+        '''
+        # build 2D array with angles 0, 53, 70
+        dat_2D = []
+        for col_head in ['downwelling_0', 'downwelling_53', 'downwelling_70']:
+            dat_2D += [self.retrieve_spectral_array(yvals, xvals, col_head)]
+        dat_2D = np.array(dat_2D)  # in units [yvals.sr-1.xvals-1]
+
+        return self.interpolate_by_angle(dat_2D, angle_array)
+
 
 
 
@@ -175,16 +149,15 @@ def Ndot_planckheaviside(Ephs, Eg, mu, kT):
     pflux = np.trapz(spec_pflux, Ephs)
     return pflux
 
-def Ndot_downwellheaviside(Eg, downwell_dict):
-    Ephs = downwell_dict['photon energies']
-    get_heavisided = np.heaviside(Ephs - Eg, 0.5) * downwell_dict['downwelling photon flux']
+def Ndot_downwellheaviside(Eg, Ephs, downwell_array):
+    get_heavisided = np.heaviside(Ephs - Eg, 0.5) * downwell_array
     pflux = np.trapz(get_heavisided, Ephs)
     return pflux
 
-def neg_powerdensity_downwellheaviside(mu, Eg, Ephs_p, kT_converter, downwell_dict):
+def neg_powerdensity_downwellheaviside(mu, Eg, Ephs_p, kT_converter, Ephs_atm, phot_flux_atm):
     # used to optimize over mu, with scipy
     Ndot_out = Ndot_planckheaviside(Ephs_p, Eg, mu, kT_converter)
-    Ndot_in = Ndot_downwellheaviside(Eg, downwell_dict)
+    Ndot_in = Ndot_downwellheaviside(Eg, Ephs_atm, phot_flux_atm)
     J = q*(Ndot_out-Ndot_in)
     return mu*J
 

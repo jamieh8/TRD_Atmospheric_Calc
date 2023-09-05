@@ -37,7 +37,6 @@ for mi, mu in enumerate(mus):
     mu_colour = cmap(0.2 + 0.8 * mi / len(mus))
     ax.plot(Ephs, spec_pflux_planck, label=f'$\mu$ = {mu}', color=mu_colour)
 
-    print(mu)
     if mu == mu_spec:
         spec_pflux_plankheaviside = spec_pflux_planckheaviside(Ephs, Eg_single, mu_spec, kT_c_eV)  # [m-2.s-2/eV]
         # ax_area.plot(Ephs, spec_pflux_plankheaviside, label=f'Planck dist $\\times$ Heaviside, $E_g$={Eg_single}eV', color=mu_spec_colour)
@@ -64,16 +63,20 @@ ax.legend()
 
 
 # Downwelling - W.m-2 vs Eph, to photon flux vs Eph
-downwell_dat_dict = retrieve_downwelling_in_particleflux(10)
-fig, axs = plt.subplots(1,2, layout='tight')
-Ephs = downwell_dat_dict['photon energies']
-axs[0].plot(Ephs, downwell_dat_dict['downwelling photon flux']*Ephs*q, c='crimson')  # [m-2.s-1/eV]*[eV]*[J/eV] --> [W.m-2/eV]
-axs[1].plot(Ephs, downwell_dat_dict['downwelling photon flux'], c=col_dict['downwellheavy_env'])
-
-axs[0].set_xlabel('Photon Energy, E$_{ph}$ [eV]')
-axs[1].set_xlabel('Photon Energy, E$_{ph}$ [eV]')
-axs[0].set_ylabel('(Spectral) Power Density Flux [$\mathrm{W.m^{-2}/eV}$]')
-axs[1].set_ylabel('(Spectral) Photon Density Flux [$\mathrm{m^{-2}.s^{-1}/eV}$]')
+# atm_dat = atmospheric_dataset(10)
+#
+# fig, axs = plt.subplots(1,2, layout='tight')
+# Ephs = atm_dat.photon_energies
+#
+# downwelling_pd = atm_dat.retrieve_spectral_array(yvals='W.m-2', xvals='eV', col_name='downwelling_flux')
+# downwelling_pf = atm_dat.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
+# axs[0].plot(Ephs, downwelling_pd, c='crimson')
+# axs[1].plot(Ephs, downwelling_pf, c=col_dict['downwellheavy_env'])
+#
+# axs[0].set_xlabel('Photon Energy, E$_{ph}$ [eV]')
+# axs[1].set_xlabel('Photon Energy, E$_{ph}$ [eV]')
+# axs[0].set_ylabel('(Spectral) Power Density Flux [$\mathrm{W.m^{-2}/eV}$]')
+# axs[1].set_ylabel('(Spectral) Photon Density Flux [$\mathrm{m^{-2}.s^{-1}/eV}$]')
 
 
 plt.show()

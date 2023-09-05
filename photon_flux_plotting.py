@@ -66,8 +66,9 @@ axs[0][1].legend()
 
 cwv_cols = {10: 'deeppink', 24:'steelblue', 54:'seagreen'}
 for cwv in [10,24,54]:
-    pflux_downwell = retrieve_downwelling_in_particleflux(cwv)
-    Ephs_dw, spec_pflux_dw = pflux_downwell['photon energies'], pflux_downwell['downwelling photon flux']
+    atm_dataset = atmospheric_dataset(cwv)
+    Ephs_dw = atm_dataset.photon_energies
+    spec_pflux_dw = atm_dataset.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
     axs[1][0].plot(Ephs_dw, spec_pflux_dw, label=f'cwv {cwv}', color=cwv_cols[cwv])
 
     spec_pflux_dwheaviside = np.heaviside(Ephs_dw - Eg_single, 0.5) * spec_pflux_dw
@@ -75,7 +76,7 @@ for cwv in [10,24,54]:
     # axs[1][0].fill_between(Ephs_dw, spec_pflux_dwheaviside, color=col_dict['downwellheavy_env'], alpha=0.1)
 
     i_begin = np.searchsorted(Egs, Ephs_dw[0])
-    N_downwell_abs = np.vectorize(Ndot_downwellheaviside)(Egs[i_begin:], pflux_downwell)
+    N_downwell_abs = np.vectorize(Ndot_downwellheaviside, excluded=[1,2])(Egs[i_begin:], Ephs_dw, spec_pflux_dw)
     axs[1][1].plot(Egs[i_begin:], N_downwell_abs, label=f'cwv {cwv}, Heaviside', color=cwv_cols[cwv])
 
 

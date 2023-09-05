@@ -31,7 +31,8 @@ cwv_cols = {10: 'deeppink', 24:'steelblue', 54:'seagreen'}
 cwv_temps = {10:296.724, 24:304.868, 54:303.512}
 
 for cwv in cwvs:
-    pflux_downwell = retrieve_downwelling_in_particleflux(cwv)
+    atm_data = atmospheric_dataset(cwv)
+    downwelling_diff = atm_data.retrieve_spectral_array('s-1.m-2','eV','downwelling_flux')
     # plt.figure(1)
     # plt.plot(pflux_downwell['photon energies'], pflux_downwell['downwelling photon flux'], label=f'cwv {cwv}', c=cwv_cols[cwv])
 
@@ -40,7 +41,7 @@ for cwv in cwvs:
     for Eg in Egs_dw:
         kT_c_eV = cwv_temps[cwv] * kT_eV
         opt_mu_dwh = minimize_scalar(neg_powerdensity_downwellheaviside, bounds=[-Eg, 0],
-                                     args=(Eg, Ephs, kT_c_eV, pflux_downwell))
+                                     args=(Eg, Ephs, kT_c_eV, atm_data.photon_energies, downwelling_diff))
         maxPs += [opt_mu_dwh.fun]
         Vmpps += [opt_mu_dwh.x]
 

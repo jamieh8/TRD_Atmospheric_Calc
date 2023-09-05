@@ -3,13 +3,10 @@ from TRD_Atmospheric_Functions import *
 
 atm_data = atmospheric_dataset(cwv=10)
 
-dwr_dict = atm_data.retrieve_downwellingrad_as_nparray(x_vals = 'photon energies')
-Ephs = np.array(dwr_dict['photon energies'])
-dwr_Wm2 = np.array(dwr_dict['downwelling rad'])
-downwelling_phots = np.divide(dwr_Wm2,(Ephs*q))  # [W.m-2/sr.eV] --> [s-1.m-2/sr.eV]
+Ephs = atm_data.photon_energies
 
 angle_array = np.linspace(0,90,100)
-dat_3D_int = atm_data.interpolate_by_angle(downwelling_phots, angle_array = angle_array)
+dat_3D_int = atm_data.retrieve_interpolated_angle_spectral_data(angle_array, yvals='s-1.m-2', xvals='eV')
 
 
 # make heatmap
@@ -63,16 +60,14 @@ for cutoff_angle in cutoff_angles:
     axs[0].plot(Ephs, spectral_photon_flux, label=cutoff_angle)
 
     phot_flux = spectral_photon_flux # [W.m-2/eV] / [eV][J/eV] --> [s-1.m-2/eV]
-    dw_dict = {'photon energies':Ephs, 'downwelling photon flux':phot_flux}
-    Ndot_vs_Eg = np.vectorize(Ndot_downwellheaviside)(Egs, dw_dict)
+    Ndot_vs_Eg = np.vectorize(Ndot_downwellheaviside, excluded=[1,2])(Egs, Ephs, phot_flux)
     axs[1].plot(Egs, Ndot_vs_Eg)
 
 # diffusivity approx, for comparison
-dw_diffusitivtyapprox = atm_data.retrieve_downwelling_in_particleflux()
-Ephs_diff = dw_diffusitivtyapprox['photon energies']
-SPDF_diff = dw_diffusitivtyapprox['downwelling photon flux']
+SPDF_diff = atm_data.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
+Ephs_diff = atm_data.photon_energies
 axs[0].plot(Ephs_diff, SPDF_diff, ':k', label='Diffusivity approx (53$^\circ \\times \pi$)')
-axs[1].plot(Egs, np.vectorize(Ndot_downwellheaviside)(Egs, dw_diffusitivtyapprox), ':k')
+axs[1].plot(Egs, np.vectorize(Ndot_downwellheaviside, excluded=[1,2])(Egs, Ephs_diff, SPDF_diff), ':k')
 
 axs[0].legend()
 axs[0].set_ylabel('Spectral Photon Density Flux [s$^{-1}$.m$^{-2}$/eV]')
@@ -80,7 +75,6 @@ axs[0].set_xlabel('Photon Energy, E$_{ph}$ [eV]')
 
 axs[1].set_ylabel('Photon Density Flux, $\dot{\mathrm{N}}$ [m$^{-2}$.s$^{-1}]$')
 axs[1].set_xlabel('Bandgap, E$_g$ [eV]')
-
 
 
 plt.show()
