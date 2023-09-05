@@ -2,6 +2,7 @@ import numpy as np
 import os
 import xarray as xr
 from solcore.constants import kb, c, h, q
+from scipy.optimize import minimize_scalar
 
 
 def convert_from(array_in, units_in, units_out, corresponding_xs=None):
@@ -57,7 +58,6 @@ class atmospheric_dataset:
 
     def retrieve_spectral_array(self, yvals = 'W.m-2', xvals = 'eV', col_name = 'downwelling_flux'):
         '''
-
         :param yvals: Can be 'W.m-2', 's-1.m-2', or 'W.cm-2'. If string is not recognized, 'W.cm-2' is returned.
         :param xvals: Can be 'cm-1', 'eV', 'um'. If string is not recognized, 'cm-1' is returned.
         :param col_name: Can be 'downwelling_x' (with x = 0, 53, 70), 'downwelling_flux', 'upwelling_flux', 'net_flux'.
@@ -95,9 +95,8 @@ class atmospheric_dataset:
 
         return dat_2D_int
 
-    def retrieve_interpolated_angle_spectral_data(self, angle_array, yvals = 'W.m-2', xvals='eV', ):
+    def interpolate_angle_spectral_data(self, angle_array, yvals = 'W.m-2', xvals='eV'):
         '''
-
         :param angle_array: 1D array of angles, in degrees, at which to interpolate the spectral data.
         :param yvals: 'W.m-2' or 's-1.m-2'
         :param xvals: 'cm-1', 'um', or 'eV'
@@ -108,10 +107,87 @@ class atmospheric_dataset:
         for col_head in ['downwelling_0', 'downwelling_53', 'downwelling_70']:
             dat_2D += [self.retrieve_spectral_array(yvals, xvals, col_head)]
         dat_2D = np.array(dat_2D)  # in units [yvals.sr-1.xvals-1]
-
         return self.interpolate_by_angle(dat_2D, angle_array)
 
+    def retrieve_interpolated_angle_spectral_photflux(self, angle_array):
+        '''
+        Check if interpolated photon flux array exists (with right angle_array). If yes, return it. If no, run interpolation then return it.
+        :param angle_array: 1D array of angles, in degrees, at which to interpolate the spectral data.
+        :return: 2D numpy array, with values in [s-1.m-2.sr-1.eV-1]. Rows correspond to angles in angle_array. Columns corresponds to photon energies.
+        '''
 
+        if hasattr(self, 'int_ang_spec_photflux') and (self, 'angle_array') and np.array_equal(self.angle_array, angle_array):
+            return self.int_ang_spec_photflux
+        else:
+            self.int_ang_spec_photflux = self.interpolate_angle_spectral_data(angle_array, yvals='s-1.m-2', xvals='eV')
+            self.angle_array = angle_array
+            return self.int_ang_spec_photflux
+
+    def spectral_data_with_cutoffangle(self, angle_array, cutoff_angle):
+        '''
+        :param angle_array: 1D array of angles at which to interpolate spectral data, in degrees (0 to 90).
+        :param cutoff_angle: between 0 and 90, in degrees. Angles smaller than cutoff will be "absorbed".
+        :return: 1D array, spectral photon density flux [s-1.m-2/eV]
+        '''
+        photflux_int_2D = self.retrieve_interpolated_angle_spectral_photflux(angle_array)
+        hvs = np.heaviside(cutoff_angle - angle_array, 1)
+        rad_with_heaviside = np.transpose(np.transpose(photflux_int_2D) * hvs)  # using heaviside to select "accepted" angles (*1), or "rejected" (*0)
+        spectral_photon_flux = 2 * np.trapz(rad_with_heaviside, np.radians(angle_array), axis=0)  # 2* --> incidence angle to steridians/solid angle ?
+        return spectral_photon_flux
+
+    def retrieve_Ndot_heaviside(self, Eg, cutoff_angle):
+        angle_array = np.linspace(0,90,100)
+        Ephs = self.photon_energies
+        spec_phot_flux = self.spectral_data_with_cutoffangle(angle_array, cutoff_angle)
+        spec_pf_heavisided = spec_phot_flux * np.heaviside(Ephs-Eg, 0.5)
+        return np.trapz(spec_pf_heavisided, Ephs)
+
+
+
+class planck_law_body:
+    def __init__(self, T=300):
+        self.T = T
+        self.kT_eV = kb * T / q  # [eV]
+
+    def angle_spectral_photon_flux(self, Eph, mu):
+        # [s-1.m-2 / sr.eV]
+        return (2 / (c**2 * (h/q)**3)) * Eph**2 / (np.exp((Eph - mu) / self.kT_eV) - 1)
+
+    def spectral_photon_flux(self, Eph, mu, angular_range = np.pi):
+        # [s-1.m-2 / eV]
+        return self.angle_spectral_photon_flux(Eph, mu) * angular_range
+
+    def retrieve_Ndot_heaviside(self, Ephs, Eg, mu, angular_range = np.pi):
+        '''
+
+        :param Ephs: Array of photon energies to use, in [eV]
+        :param Eg: Bandgap, in [eV]
+        :param mu: Fermi level split, in [eV]
+        :return: Photon density flux [s-1.m-2]
+        '''
+        hvs_weight = np.heaviside(Ephs-Eg, 0.5)
+        phot_flux = self.spectral_photon_flux(Ephs, mu, angular_range)
+        phot_flux_heavisided = hvs_weight*phot_flux
+
+        return np.trapz(phot_flux_heavisided, Ephs)
+
+
+class TRD_in_atmosphere:
+    def __init__(self, TRD_body, atm_dataset, Ephs_TRD):
+        self.TRD_body = TRD_body
+        self.atm_data = atm_dataset
+        self.Ephs = Ephs_TRD
+
+    def power_density(self, mu, Eg, angular_range):
+        Ndot_out = self.TRD_body.retrieve_Ndot_heaviside(self.Ephs, Eg, mu, angular_range)
+        Ndot_in = self.atm_data.retrieve_Ndot_heaviside(Eg, np.degrees(angular_range)/2)
+        J = q * (Ndot_out-Ndot_in)
+        return J*mu
+
+    def optimize_mu(self, Eg, angular_range):
+        opt_mu_dwh = minimize_scalar(self.power_density, bounds=[-Eg, 0],
+                                     args=(Eg, angular_range))
+        return {'max power':opt_mu_dwh.fun, 'Vmpp':opt_mu_dwh.x}
 
 
 def planck_dist(Eph, mu, kT):
