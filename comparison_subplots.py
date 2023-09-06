@@ -1,7 +1,10 @@
 import matplotlib.pyplot as plt
 from TRD_Atmospheric_Functions import *
 
-cwv = 24
+# cwv, T = 10, 296.724
+cwv, T = 24, 304.868
+# cwv, T = 54, 303.512
+
 atm_data = atmospheric_dataset(cwv=cwv)
 emitter_planck = planck_law_body(T=300)
 
@@ -13,7 +16,7 @@ comparison_lst = []
 
 # comparing different cutoff angles
 
-cmap = plt.get_cmap('Set2')
+cmap = plt.get_cmap('tab10')
 cutoff_angles = np.arange(10,95,20)
 for ai, cutoff_angle in enumerate(cutoff_angles):
     comparison_lst += [{'label':f'cwv{cwv}, cutoff {cutoff_angle}', 'color':cmap(ai),
@@ -38,14 +41,13 @@ for sample_dct in comparison_lst:
     atm_data = sample_dct['atmospheric dataset']
     emitter = sample_dct['emitter body']
     cutoff_angle = sample_dct['cutoff angle']
-    range_rad = 2*np.radians(cutoff_angle)
 
     if include_photflux_plots:
         # outgoing photon flux
-        spec_phot_flux_out = emitter.spectral_photon_flux(Ephs, mu=0, angular_range=range_rad)
+        spec_phot_flux_out = emitter.spectral_photon_flux(Ephs, mu=0, cutoff_angle=cutoff_angle)
         axs_pf[0][0].plot(Ephs, spec_phot_flux_out, label=f'cutoff {cutoff_angle}', color=sample_dct['color'])
 
-        Ndot_out = np.vectorize(emitter.retrieve_Ndot_heaviside, excluded=[0])(Ephs, Egs, mu=0, angular_range = range_rad)
+        Ndot_out = np.vectorize(emitter.retrieve_Ndot_heaviside, excluded=[0])(Ephs, Egs, mu=0, cutoff_angle=cutoff_angle)
         axs_pf[0][1].plot(Egs, Ndot_out, color=sample_dct['color'])
 
         # incoming photon flux
@@ -62,7 +64,7 @@ for sample_dct in comparison_lst:
         maxPs = []
         Vmpps = []
         for Eg in Egs:
-            mu_opt = combined_obj.optimize_mu(Eg, range_rad)
+            mu_opt = combined_obj.optimize_mu(Eg, cutoff_angle)
             maxPs += [mu_opt['max power']]
             Vmpps += [mu_opt['Vmpp']]
         axs_Popt[0].plot(Egs, maxPs, color=sample_dct['color'], label=sample_dct['label'])

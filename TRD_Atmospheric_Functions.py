@@ -131,9 +131,18 @@ class atmospheric_dataset:
         '''
         photflux_int_2D = self.retrieve_interpolated_angle_spectral_photflux(angle_array)
         hvs = np.heaviside(cutoff_angle - angle_array, 1)
+
+        #  method 1 - integrate over solid angles
         rad_with_heaviside = np.transpose(np.transpose(photflux_int_2D) * hvs)  # using heaviside to select "accepted" angles (*1), or "rejected" (*0)
-        spectral_photon_flux = 2 * np.trapz(rad_with_heaviside, np.radians(angle_array), axis=0)  # 2* --> incidence angle to steridians/solid angle ?
-        return spectral_photon_flux
+        solid_angles = 2*np.pi*(1-np.cos(np.radians(angle_array)))
+        spectral_photon_flux = np.trapz(rad_with_heaviside, solid_angles, axis=0)
+
+        # method 2 - integrate over zenith angles
+        # sin_zenith = np.sin(np.radians(angle_array))
+        # rad_hv_sinz = 2*np.pi*np.transpose(np.transpose(photflux_int_2D) * hvs * sin_zenith)
+        # spectral_photon_flux = np.trapz(rad_hv_sinz, np.radians(angle_array), axis=0)
+
+        return spectral_photon_flux*0.5
 
     def retrieve_Ndot_heaviside(self, Eg, cutoff_angle):
         angle_array = np.linspace(0,90,100)
@@ -153,11 +162,12 @@ class planck_law_body:
         # [s-1.m-2 / sr.eV]
         return (2 / (c**2 * (h/q)**3)) * Eph**2 / (np.exp((Eph - mu) / self.kT_eV) - 1)
 
-    def spectral_photon_flux(self, Eph, mu, angular_range = np.pi):
+    def spectral_photon_flux(self, Eph, mu, cutoff_angle):
         # [s-1.m-2 / eV]
-        return self.angle_spectral_photon_flux(Eph, mu) * angular_range
+        sa = 2*np.pi*(1-np.cos(np.radians(cutoff_angle)))
+        return 0.5 * self.angle_spectral_photon_flux(Eph, mu) * sa
 
-    def retrieve_Ndot_heaviside(self, Ephs, Eg, mu, angular_range = np.pi):
+    def retrieve_Ndot_heaviside(self, Ephs, Eg, mu, cutoff_angle):
         '''
 
         :param Ephs: Array of photon energies to use, in [eV]
@@ -166,7 +176,7 @@ class planck_law_body:
         :return: Photon density flux [s-1.m-2]
         '''
         hvs_weight = np.heaviside(Ephs-Eg, 0.5)
-        phot_flux = self.spectral_photon_flux(Ephs, mu, angular_range)
+        phot_flux = self.spectral_photon_flux(Ephs, mu, cutoff_angle)
         phot_flux_heavisided = hvs_weight*phot_flux
 
         return np.trapz(phot_flux_heavisided, Ephs)
@@ -178,15 +188,15 @@ class TRD_in_atmosphere:
         self.atm_data = atm_dataset
         self.Ephs = Ephs_TRD
 
-    def power_density(self, mu, Eg, angular_range):
-        Ndot_out = self.TRD_body.retrieve_Ndot_heaviside(self.Ephs, Eg, mu, angular_range)
-        Ndot_in = self.atm_data.retrieve_Ndot_heaviside(Eg, np.degrees(angular_range)/2)
+    def power_density(self, mu, Eg, cutoff_angle):
+        Ndot_out = self.TRD_body.retrieve_Ndot_heaviside(self.Ephs, Eg, mu, cutoff_angle)
+        Ndot_in = self.atm_data.retrieve_Ndot_heaviside(Eg,cutoff_angle)
         J = q * (Ndot_out-Ndot_in)
         return J*mu
 
-    def optimize_mu(self, Eg, angular_range):
+    def optimize_mu(self, Eg, cutoff_angle):
         opt_mu_dwh = minimize_scalar(self.power_density, bounds=[-Eg, 0],
-                                     args=(Eg, angular_range))
+                                     args=(Eg, cutoff_angle))
         return {'max power':opt_mu_dwh.fun, 'Vmpp':opt_mu_dwh.x}
 
 
