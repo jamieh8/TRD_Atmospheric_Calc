@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import xarray as xr
+import pygmo as pg
 from solcore.constants import kb, c, h, q
 from scipy.optimize import minimize_scalar
 
@@ -264,4 +265,39 @@ def neg_powerdensity_plancks(mu, Eg, Ephs, kT_convert, kT_env):
     J = q * (Ndot_out - Ndot_in)
     return mu * J
 
+class optimize_powerdensity:
+    def __init__(self, trd_in_environment, cutoff_angle):
+        self.trd_in_env = trd_in_environment
+        self.cutoff_angle = cutoff_angle
 
+    def fitness(self, x):
+        # x = [Eg, mu]
+        Eg = x[0]
+        mu = x[1]
+        power_density = self.trd_in_env.power_density(mu, Eg, self.cutoff_angle)
+        ineq_constraint = (-1)*(Eg + mu) # must be smaller or equal to 0 (mu is negative, must be smaller in magnitude than Eg)
+        return [power_density, ineq_constraint]
+
+    def get_bounds(self):
+        # bounds = ([min Eg, min mu], [max Eg, max mu])
+        return ([0.06, -0.15], [0.15, 0])
+
+    def get_nic(self):
+        # inequality constraint count
+        return 1
+
+
+def get_best_pd(trd_in_environment, cutoff_angle, alg):
+    # define problem with UDP
+    prob = pg.problem(optimize_powerdensity(trd_in_environment, cutoff_angle))
+
+    # initial population
+    pop = pg.population(prob, size=10)
+    algo = pg.algorithm(alg)
+    # algo.set_verbosity(1)
+
+    pop = algo.evolve(pop)
+    best_pd = pop.champion_f
+    best_x = pop.champion_x
+
+    return best_x, best_pd

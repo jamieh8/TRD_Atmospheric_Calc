@@ -1,12 +1,12 @@
 import matplotlib.pyplot as plt
 from TRD_Atmospheric_Functions import *
 
-# cwv, T = 10, 296.724
+cwv, T = 10, 296.724
 # cwv, T = 24, 304.868
-cwv, T = 54, 303.512
+# cwv, T = 54, 303.512
 
 atm_data = atmospheric_dataset(cwv=cwv)
-emitter_planck = planck_law_body(T=300)
+emitter_planck = planck_law_body(T=T)
 
 Ephs = atm_data.photon_energies
 
@@ -23,9 +23,6 @@ for ai, cutoff_angle in enumerate(cutoff_angles):
                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
                         'cutoff angle':cutoff_angle}]
 
-
-# integrate over solid angle, using heaviside weighing and different angles of acceptance
-# cutoff angle
 
 include_photflux_plots = True
 if include_photflux_plots:
