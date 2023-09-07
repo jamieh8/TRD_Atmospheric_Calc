@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 from TRD_Atmospheric_Functions import *
 
 # cwv, T = 10, 296.724
-cwv, T = 24, 304.868
-# cwv, T = 54, 303.512
+# cwv, T = 24, 304.868
+cwv, T = 54, 303.512
 
 atm_data = atmospheric_dataset(cwv=cwv)
 emitter_planck = planck_law_body(T=300)

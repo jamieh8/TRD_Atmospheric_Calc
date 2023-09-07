@@ -48,7 +48,7 @@ class atmospheric_dataset:
         '''
         Loads in file as an xarray, with all original data values (i.e. no unit conversion), on initialization.
         Calculate wavenumbers, wavelengths, and photon_energies. Save resulting 1D arrays as class properties.
-        :param cwv: column water vapour, should be 10, 24, or 54.
+        :param cwv: column water vapour, should be 10, 24, or 54. Used to retrieve the correct file.
         '''
         self.org_xarray = self.load_file_as_xarray(cwv)
 
@@ -71,12 +71,17 @@ class atmospheric_dataset:
             new_array = new_array * 1e4  # [W.m-2.(sr-1)/cm-1]
         elif yvals == 's-1.m-2':
             new_array = new_array * 1e4 / (self.photon_energies * q)  #[W.m-2.(sr-1)/cm-1] / [eV][J/eV] --> [s-1.m-2.(sr-1)/cm-1]
+        else:
+            print('yvals string not recognized. Returning spectral array in default W.m-2')
 
         if xvals !='cm-1':
             if xvals == 'eV':
                 units_out_str = 'per photon energy [/eV]'
             elif xvals == 'um':
                 units_out_str = 'per wavelength [/um]'
+            else:
+                print('xvals string not recognized. Returning spectral array in default /eV')
+                units_out_str = 'per photon energy [/eV]'
             new_array = convert_from(new_array,
                                      units_in='per wavenumber [/cm-1]', units_out=units_out_str,
                                      corresponding_xs=self.wavenumbers)
@@ -112,8 +117,8 @@ class atmospheric_dataset:
     def retrieve_interpolated_angle_spectral_photflux(self, angle_array):
         '''
         Check if interpolated photon flux array exists (with right angle_array). If yes, return it. If no, run interpolation then return it.
-        :param angle_array: 1D array of angles, in degrees, at which to interpolate the spectral data.
-        :return: 2D numpy array, with values in [s-1.m-2.sr-1.eV-1]. Rows correspond to angles in angle_array. Columns corresponds to photon energies.
+        :param angle_array: 1D array of zenith angles, in degrees, at which to interpolate the spectral data.
+        :return: 2D numpy array, with values in [s-1.m-2.sr-1.eV-1]. Rows correspond to the zenith angles in angle_array. Columns corresponds to photon energies.
         '''
 
         if hasattr(self, 'int_ang_spec_photflux') and (self, 'angle_array') and np.array_equal(self.angle_array, angle_array):
@@ -126,23 +131,25 @@ class atmospheric_dataset:
     def spectral_data_with_cutoffangle(self, angle_array, cutoff_angle):
         '''
         :param angle_array: 1D array of angles at which to interpolate spectral data, in degrees (0 to 90).
-        :param cutoff_angle: between 0 and 90, in degrees. Angles smaller than cutoff will be "absorbed".
+        :param cutoff_angle: zenith angle between 0 and 90, in degrees. Angles smaller than or equal to the cutoff will be 100% "absorbed".
         :return: 1D array, spectral photon density flux [s-1.m-2/eV]
         '''
         photflux_int_2D = self.retrieve_interpolated_angle_spectral_photflux(angle_array)
-        hvs = np.heaviside(cutoff_angle - angle_array, 1)
+        hvs = np.heaviside(cutoff_angle - angle_array, 1)  # using heaviside to select "accepted" angles (*1), or "rejected" (*0)
 
-        #  method 1 - integrate over solid angles
-        rad_with_heaviside = np.transpose(np.transpose(photflux_int_2D) * hvs)  # using heaviside to select "accepted" angles (*1), or "rejected" (*0)
-        solid_angles = 2*np.pi*(1-np.cos(np.radians(angle_array)))
-        spectral_photon_flux = np.trapz(rad_with_heaviside, solid_angles, axis=0)
+        # integrate over zenith angles
+        sin_zenith = np.sin(np.radians(angle_array))  # zenith angle -> theta
+        cos_zenith = np.cos(np.radians(angle_array))
+        # d(Omega) = sin(theta) * d(theta) * d(phi), element solid angle
+        # cos(theta) factor for Lambertian emitter
+        # Spectral_PDF = \int_0^cutoff Directional_Spectral_PDF cos(theta) d(Omega)
+        # Spectral_PDF = \int_0^2pi d(phi) \int_0^theta_cutoff Directional_Spectral_PDF cos(theta) sin(theta) d(theta)
+        # Spectral_PDF = 2pi \int_0^90 heaviside * Directional_Spectral_PDF cos(theta) sin(theta) d(theta)
 
-        # method 2 - integrate over zenith angles
-        # sin_zenith = np.sin(np.radians(angle_array))
-        # rad_hv_sinz = 2*np.pi*np.transpose(np.transpose(photflux_int_2D) * hvs * sin_zenith)
-        # spectral_photon_flux = np.trapz(rad_hv_sinz, np.radians(angle_array), axis=0)
+        rad_hv_sinz = np.transpose(np.transpose(photflux_int_2D) * hvs * sin_zenith * cos_zenith)  # [s-1.m-2.sr-1/eV]*[rad]
+        spectral_photon_flux = 2* np.pi* np.trapz(rad_hv_sinz, np.radians(angle_array), axis=0)   # [s-1.m-2.rad-1/eV]*[rad]
 
-        return spectral_photon_flux*0.5
+        return spectral_photon_flux  # [s-1.m-2/eV]
 
     def retrieve_Ndot_heaviside(self, Eg, cutoff_angle):
         angle_array = np.linspace(0,90,100)
@@ -164,8 +171,11 @@ class planck_law_body:
 
     def spectral_photon_flux(self, Eph, mu, cutoff_angle):
         # [s-1.m-2 / eV]
-        sa = 2*np.pi*(1-np.cos(np.radians(cutoff_angle)))
-        return 0.5 * self.angle_spectral_photon_flux(Eph, mu) * sa
+        # [s-1.m-2.eV-1] = [s-1.m-2.sr-1.eV-1]*[sr] -- integral over solid angle
+        # d(Omega) = sin(theta) * d(theta) * d(phi), element solid angle
+        #
+        int_sinz_cosz = np.sin(np.radians(cutoff_angle))**2 / 2
+        return 2*np.pi * self.angle_spectral_photon_flux(Eph, mu) * int_sinz_cosz
 
     def retrieve_Ndot_heaviside(self, Ephs, Eg, mu, cutoff_angle):
         '''
