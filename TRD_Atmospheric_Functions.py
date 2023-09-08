@@ -270,7 +270,7 @@ def neg_powerdensity_plancks(mu, Eg, Ephs, kT_convert, kT_env):
 class optimize_powerdensity:
     def __init__(self, trd_in_environment, args_to_opt, args_to_fix):
         self.trd_in_env = trd_in_environment
-        self.args_to_opt = args_to_opt
+        self.args_to_opt = args_to_opt  # list of strings with arguments to optimize
         self.args_to_fix = args_to_fix  # dict with fixed values to use
 
     def fitness(self, x):
@@ -284,10 +284,12 @@ class optimize_powerdensity:
         return [power_density]
 
     def get_bounds(self):
+        # bounds for each argument, for reference
         bound_ref = {'Eg':{'min':0.062, 'max':0.15},
                      'mu':{'min':-0.15, 'max':0},
-                     'cutoff_angle':{'min':0, 'max':90}}
+                     'cutoff_angle':{'min':10, 'max':90}}
 
+        # retrieve relevant bounds, for the arguments being optimized
         mins, maxs = [], []
         for opt_args in self.args_to_opt:
             mins += [bound_ref[opt_args]['min']]
