@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from TRD_Atmospheric_Functions import *
 from scipy.optimize import minimize_scalar
+from matplotlib.colors import Normalize
 
 
 # Tc = 300  # temperature of emitter / converter
@@ -119,23 +120,91 @@ col_dict = {'planck_emit':'skyblue', 'planckheavy_emit':'darkblue', 'planck_env_
 
 
 # Test: optimize over cutoff angle
-cwv, T = 10, 296.724
+Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
 
-atm_data = atmospheric_dataset(cwv)
-downwelling_diff = atm_data.retrieve_spectral_array('s-1.m-2', 'eV', 'downwelling_flux')
-emitter_planck = planck_law_body(T=T)
+# cwv, T = 10, 296.724
+# cwv, T = 24, 304.868
+# cwv, T = 54, 303.512
 
-combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data, Ephs)
-alg = pg.scipy_optimize(method='SLSQP', tol=1e-5)
+to_plot = []
+to_plot += [{'cwv':10, 'Tc':296.724, 'label':'cwv10', 'colour':'deeppink'}]
+to_plot += [{'cwv':24, 'Tc':304.868, 'label':'cwv24', 'colour':'steelblue'}]
+to_plot += [{'cwv':54, 'Tc':303.512, 'label':'cwv54', 'colour':'seagreen'}]
+
+alg = pg.scipy_optimize(method='Powell', tol=1e-3)
 # alg = pg.de(gen=50, ftol=1e-3)
 
-max_pds = []
-for angle in np.arange(10,95,10):
-    opt_res = get_best_pd(combined_trd_env, cutoff_angle=angle, alg = alg)
-    max_pds += [opt_res[1]]
-    print(f'Eg {opt_res[0][0]}, mu {opt_res[0][1]}')
+for case in to_plot:
 
-plt.plot(np.arange(10,95,10), max_pds)
+    atm_data = atmospheric_dataset(case['cwv'])
+    emitter_planck = planck_law_body(T=case['Tc'])
+    combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data, Ephs)
+
+    max_pds = []
+    for angle in np.arange(10,95,10):
+        opt_res = get_best_pd(combined_trd_env, cutoff_angle=angle, alg = alg)
+        max_pds += [opt_res[1]]
+        print(f'Eg {opt_res[0][0]}, mu {opt_res[0][1]}')
+
+    plt.plot(np.arange(10,95,10), max_pds, c=case['colour'], label=case['label'])
+
+plt.ylabel(r'Power Density [W.m$^{-2}$]')
+plt.xlabel('Cutoff Angle [$\circ$]')
+plt.legend()
+
+# ----------------- Heatmap for testing optimizer -----------------
+# fig, axs = plt.subplots(1,1)
+# Egs = np.linspace(0.062, 0.2, 100)
+# mus = np.linspace(-0.1, 0, 100)
+# cutoff_angle = 70
+#
+# filename = f'PD_cutoff{cutoff_angle}_Egs_0.062_02_100_mus_-01_0_100.csv'
+#
+# # # Generate new data
+# # pds_2d = []
+# # for Eg in Egs:
+# #     row = []
+# #     for mu in mus:
+# #         if mu < -Eg:
+# #             pd = np.nan
+# #         else:
+# #             pd = combined_trd_env.power_density(mu, Eg, cutoff_angle=cutoff_angle)
+# #         row += [pd]
+# #     pds_2d += [row]
+# # np.savetxt(filename, np.asarray(pds_2d), delimiter = ',')
+#
+# # Import existing data
+# pds_2d = np.loadtxt(filename, delimiter=',', dtype=float)
+#
+# # Test optimizer
+# alg = pg.scipy_optimize(method='Powell', tol=1e-5)
+# # alg = pg.de(gen=50, ftol=1e-5)
+# Egs_opt = []
+# Vs_opt = []
+# pds_opt = []
+# for i in range(20):
+#     opt_res = get_best_pd(combined_trd_env, cutoff_angle=cutoff_angle, alg = alg)
+#     plt.plot([opt_res[0][1]], [opt_res[0][0]], 'x', c='black')
+#
+#     Egs_opt += [opt_res[0][1]]
+#     Vs_opt += [opt_res[0][0]]
+#     pds_opt += [opt_res[1][0]]
+#
+# for str, array in zip(['Egs','Vs','PDs'], [Egs_opt, Vs_opt, pds_opt]):
+#     print(str)
+#     for elem in array:
+#         print(elem)
+#
+# # Plot heatmap
+# norm_0mid = Normalize(vmin=-10, vmax=10)
+# h_ax = axs
+# hmap = h_ax.pcolor(mus, Egs, pds_2d, cmap='bwr', norm=norm_0mid, shading='nearest')  # heatmap
+# cbar = plt.colorbar(hmap)
+# cbar.ax.tick_params(labelsize=10)
+# # cbar.ax.set_ylabel(r'Spectral Photon Flux [$\mathrm{s^{-1}.m^{-2}.sr^{-1}/eV}$]')
+# cbar.ax.set_ylabel(r'Power Density [W.m$^{-2}$]')
+# h_ax.set_xlabel('V [V] / $\mu$ [eV]')
+# h_ax.set_ylabel('Bandgap, E$_g$ [eV]')
 
 
 plt.show()

@@ -148,7 +148,7 @@ class atmospheric_dataset:
         # Spectral_PDF = 2pi \int_0^90 heaviside * Directional_Spectral_PDF cos(theta) sin(theta) d(theta)
 
         rad_hv_sinz = np.transpose(np.transpose(photflux_int_2D) * hvs * sin_zenith * cos_zenith)  # [s-1.m-2.sr-1/eV]*[rad]
-        spectral_photon_flux = 2* np.pi* np.trapz(rad_hv_sinz, np.radians(angle_array), axis=0)   # [s-1.m-2.rad-1/eV]*[rad]
+        spectral_photon_flux = 2 * np.pi * np.trapz(rad_hv_sinz, np.radians(angle_array), axis=0)   # [s-1.m-2.rad-1/eV]*[rad]
 
         return spectral_photon_flux  # [s-1.m-2/eV]
 
@@ -174,13 +174,11 @@ class planck_law_body:
         # [s-1.m-2 / eV]
         # [s-1.m-2.eV-1] = [s-1.m-2.sr-1.eV-1]*[sr] -- integral over solid angle
         # d(Omega) = sin(theta) * d(theta) * d(phi), element solid angle
-        #
         int_sinz_cosz = np.sin(np.radians(cutoff_angle))**2 / 2
         return 2*np.pi * self.angle_spectral_photon_flux(Eph, mu) * int_sinz_cosz
 
     def retrieve_Ndot_heaviside(self, Ephs, Eg, mu, cutoff_angle):
         '''
-
         :param Ephs: Array of photon energies to use, in [eV]
         :param Eg: Bandgap, in [eV]
         :param mu: Fermi level split, in [eV]
@@ -275,16 +273,12 @@ class optimize_powerdensity:
         Eg = x[0]
         mu = x[1]
         power_density = self.trd_in_env.power_density(mu, Eg, self.cutoff_angle)
-        ineq_constraint = (-1)*(Eg + mu) # must be smaller or equal to 0 (mu is negative, must be smaller in magnitude than Eg)
-        return [power_density, ineq_constraint]
+        return [power_density]
 
     def get_bounds(self):
         # bounds = ([min Eg, min mu], [max Eg, max mu])
-        return ([0.06, -0.15], [0.15, 0])
+        return ([0.062, -0.15], [0.15, 0])
 
-    def get_nic(self):
-        # inequality constraint count
-        return 1
 
 
 def get_best_pd(trd_in_environment, cutoff_angle, alg):
