@@ -171,9 +171,13 @@ class planck_law_body:
         return (2 / (c**2 * (h/q)**3)) * Eph**2 / (np.exp((Eph - mu) / self.kT_eV) - 1)
 
     def spectral_photon_flux(self, Eph, mu, cutoff_angle):
-        # [s-1.m-2 / eV]
-        # [s-1.m-2.eV-1] = [s-1.m-2.sr-1.eV-1]*[sr] -- integral over solid angle
-        # d(Omega) = sin(theta) * d(theta) * d(phi), element solid angle
+        # [s-1.m-2.eV-1] = [s-1.m-2.sr-1.eV-1]*[sr] -- must integrate over solid angle
+        # d(Omega) = sin(theta) * d(theta) * d(phi), element solid angle for int
+        # angle_spectral_photon_flux is independent of theta, can be taken out.
+        # Spectral_PDF = \int_0^cutoff Directional_Spectral_PDF cos(theta) d(Omega)
+        # Spectral_PDF = \int_0^2pi d(phi) \int_0^theta_cutoff Directional_Spectral_PDF cos(theta) sin(theta) d(theta)
+        # Spectral_PDF = 2pi * Directional_Spectral_PDF * \int_0^theta_cutoff cos(theta) sin(theta) d(theta)
+        # with \int_0^theta_cutoff cos(theta) sin(theta) d(theta) = [sin^2(theta)/2]_0^theta_cutoff = sin^2(theta_cutoff)/2
         int_sinz_cosz = np.sin(np.radians(cutoff_angle))**2 / 2
         return 2*np.pi * self.angle_spectral_photon_flux(Eph, mu) * int_sinz_cosz
 
@@ -264,31 +268,49 @@ def neg_powerdensity_plancks(mu, Eg, Ephs, kT_convert, kT_env):
     return mu * J
 
 class optimize_powerdensity:
-    def __init__(self, trd_in_environment, cutoff_angle):
+    def __init__(self, trd_in_environment, args_to_opt, args_to_fix):
         self.trd_in_env = trd_in_environment
-        self.cutoff_angle = cutoff_angle
+        self.args_to_opt = args_to_opt
+        self.args_to_fix = args_to_fix  # dict with fixed values to use
 
     def fitness(self, x):
-        # x = [Eg, mu]
-        Eg = x[0]
-        mu = x[1]
-        power_density = self.trd_in_env.power_density(mu, Eg, self.cutoff_angle)
+        # assemble arguments
+        new_args = self.args_to_fix
+        for ai, opt_args in enumerate(self.args_to_opt):
+            new_args.update({opt_args:x[ai]})
+
+        power_density = self.trd_in_env.power_density(**new_args)
+
         return [power_density]
 
     def get_bounds(self):
-        # bounds = ([min Eg, min mu], [max Eg, max mu])
-        return ([0.062, -0.15], [0.15, 0])
+        bound_ref = {'Eg':{'min':0.062, 'max':0.15},
+                     'mu':{'min':-0.15, 'max':0},
+                     'cutoff_angle':{'min':0, 'max':90}}
+
+        mins, maxs = [], []
+        for opt_args in self.args_to_opt:
+            mins += [bound_ref[opt_args]['min']]
+            maxs += [bound_ref[opt_args]['max']]
+
+        return (mins, maxs)
 
 
-
-def get_best_pd(trd_in_environment, cutoff_angle, alg):
+def get_best_pd(trd_in_environment, args_to_opt, args_to_fix, alg):
+    '''
+    :param trd_in_environment: Instance of TRD_in_atmosphere class, with method power_density defined
+    :param args_to_opt: List of strings defining which arguments of power_density to optimize. Options are 'Eg', 'mu', 'cutoff_angle'. Order of strings determines order in which optimized x values are returned.
+    :param args_to_fix: Dictionary, with keys being strings specifying the arguments ('Eg', 'mu', 'cutoff_angle') to fix for the optimization. Corresponding values are values to fix.
+    :param alg: pygmo algorithm to use for optimization
+    :return: best_x (vector, order and contents specified by args_to_opt list), best_pd ("smallest" power density found, W.m-2)
+    '''
     # define problem with UDP
-    prob = pg.problem(optimize_powerdensity(trd_in_environment, cutoff_angle))
+    prob = pg.problem(optimize_powerdensity(trd_in_environment, args_to_opt, args_to_fix))
 
     # initial population
     pop = pg.population(prob, size=10)
     algo = pg.algorithm(alg)
-    # algo.set_verbosity(1)
+    # algo.set_verbosity(1)   # toggle for debugging
 
     pop = algo.evolve(pop)
     best_pd = pop.champion_f

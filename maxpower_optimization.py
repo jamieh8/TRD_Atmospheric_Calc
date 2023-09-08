@@ -5,21 +5,14 @@ from matplotlib.colors import Normalize
 
 
 # Tc = 300  # temperature of emitter / converter
-mu = 0
-kT_eV = kb / q
-
-Te = 30 # temperature of environment
-kT_e_eV = kb * Te / q
-k_eV = kb/q
-
-
-
-Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
-
-
-
-col_dict = {'planck_emit':'skyblue', 'planckheavy_emit':'darkblue', 'planck_env_30K':'orangered', 'planck_env_100K':'orange',
-            'boltzmann_emit':'springgreen', 'downwell_env':'lightpink', 'downwellheavy_env':'deeppink'}
+# mu = 0
+# kT_eV = kb / q
+#
+# Te = 30 # temperature of environment
+# kT_e_eV = kb * Te / q
+# k_eV = kb/q
+#
+# Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
 
 
 # Comparing 3 cwvs
@@ -127,11 +120,11 @@ Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
 # cwv, T = 54, 303.512
 
 to_plot = []
-to_plot += [{'cwv':10, 'Tc':296.724, 'label':'cwv10', 'colour':'deeppink'}]
-to_plot += [{'cwv':24, 'Tc':304.868, 'label':'cwv24', 'colour':'steelblue'}]
+# to_plot += [{'cwv':10, 'Tc':296.724, 'label':'cwv10', 'colour':'deeppink'}]
+# to_plot += [{'cwv':24, 'Tc':304.868, 'label':'cwv24', 'colour':'steelblue'}]
 to_plot += [{'cwv':54, 'Tc':303.512, 'label':'cwv54', 'colour':'seagreen'}]
 
-alg = pg.scipy_optimize(method='Powell', tol=1e-3)
+alg = pg.scipy_optimize(method='Powell', tol=1e-5)
 # alg = pg.de(gen=50, ftol=1e-3)
 
 for case in to_plot:
@@ -142,7 +135,7 @@ for case in to_plot:
 
     max_pds = []
     for angle in np.arange(10,95,10):
-        opt_res = get_best_pd(combined_trd_env, cutoff_angle=angle, alg = alg)
+        opt_res = get_best_pd(combined_trd_env, args_to_opt=['Eg', 'mu'], args_to_fix={'cutoff_angle':angle}, alg = alg)
         max_pds += [opt_res[1]]
         print(f'Eg {opt_res[0][0]}, mu {opt_res[0][1]}')
 
@@ -159,6 +152,11 @@ plt.legend()
 # cutoff_angle = 70
 #
 # filename = f'PD_cutoff{cutoff_angle}_Egs_0.062_02_100_mus_-01_0_100.csv'
+#
+# cwv, T = 10, 296.724
+# atm_data = atmospheric_dataset(cwv)
+# emitter_planck = planck_law_body(T)
+# combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data, Ephs)
 #
 # # # Generate new data
 # # pds_2d = []
@@ -182,8 +180,8 @@ plt.legend()
 # Egs_opt = []
 # Vs_opt = []
 # pds_opt = []
-# for i in range(20):
-#     opt_res = get_best_pd(combined_trd_env, cutoff_angle=cutoff_angle, alg = alg)
+# for i in range(5):
+#     opt_res = get_best_pd(combined_trd_env, args_to_opt={'Eg':0, 'mu':0}, args_to_fix={'cutoff_angle':cutoff_angle}, alg = alg)
 #     plt.plot([opt_res[0][1]], [opt_res[0][0]], 'x', c='black')
 #
 #     Egs_opt += [opt_res[0][1]]
