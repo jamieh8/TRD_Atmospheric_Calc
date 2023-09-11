@@ -30,6 +30,19 @@ def convert_from(array_in, units_in, units_out, corresponding_xs=None):
             # [cm-1/m-1][Y/cm-1]/[J.s][m.s-1][eV/J] --> [Y/m-1]/[eV.m] --> [Y/eV]
 
 
+def Ndot_boltzmann(Eg, T, mu): # particle flux density
+    # accurate for large band gaps / large negative bias
+    kT = kb*T/q # convert to eV to match units of Eg
+    N = ((2*np.pi)/(c**2*h**3))*np.exp((mu-Eg)/kT)*kT*(Eg**2 + 2*Eg*kT + 2*kT**2)
+    #eq 13 from Pusch et al 2019
+    return N*q**3
+
+def Ndot_downwellheaviside(Eg, Ephs, downwell_array):
+    get_heavisided = np.heaviside(Ephs - Eg, 0.5) * downwell_array
+    pflux = np.trapz(get_heavisided, Ephs)
+    return pflux
+
+
 class atmospheric_dataset:
     def load_file_as_xarray(self, cwv):
         filename = os.path.join('simulations_telfer', f'telfer_australia_cwv{cwv}.txt')
@@ -162,15 +175,16 @@ class atmospheric_dataset:
 
 
 class planck_law_body:
-    def __init__(self, T=300):
+    def __init__(self, T=300, Ephs=np.arange(1e-6, 0.31, 0.0001)):
         self.T = T
         self.kT_eV = kb * T / q  # [eV]
+        self.Ephs = Ephs
 
     def angle_spectral_photon_flux(self, Eph, mu):
         # [s-1.m-2 / sr.eV]
         return (2 / (c**2 * (h/q)**3)) * Eph**2 / (np.exp((Eph - mu) / self.kT_eV) - 1)
 
-    def spectral_photon_flux(self, Eph, mu, cutoff_angle):
+    def spectral_photon_flux(self, Eph, mu=0, cutoff_angle = 90):
         # [s-1.m-2.eV-1] = [s-1.m-2.sr-1.eV-1]*[sr] -- must integrate over solid angle
         # d(Omega) = sin(theta) * d(theta) * d(phi), element solid angle for int
         # angle_spectral_photon_flux is independent of theta, can be taken out.
@@ -181,13 +195,14 @@ class planck_law_body:
         int_sinz_cosz = np.sin(np.radians(cutoff_angle))**2 / 2
         return 2*np.pi * self.angle_spectral_photon_flux(Eph, mu) * int_sinz_cosz
 
-    def retrieve_Ndot_heaviside(self, Ephs, Eg, mu, cutoff_angle):
+    def retrieve_Ndot_heaviside(self, Eg, mu=0, cutoff_angle=90):
         '''
         :param Ephs: Array of photon energies to use, in [eV]
         :param Eg: Bandgap, in [eV]
         :param mu: Fermi level split, in [eV]
         :return: Photon density flux [s-1.m-2]
         '''
+        Ephs = self.Ephs
         hvs_weight = np.heaviside(Ephs-Eg, 0.5)
         phot_flux = self.spectral_photon_flux(Ephs, mu, cutoff_angle)
         phot_flux_heavisided = hvs_weight*phot_flux
@@ -196,76 +211,31 @@ class planck_law_body:
 
 
 class TRD_in_atmosphere:
-    def __init__(self, TRD_body, atm_dataset, Ephs_TRD):
+    def __init__(self, TRD_body, atmosphere):
         self.TRD_body = TRD_body
-        self.atm_data = atm_dataset
-        self.Ephs = Ephs_TRD
+        self.atm = atmosphere
 
-    def power_density(self, mu, Eg, cutoff_angle):
-        Ndot_out = self.TRD_body.retrieve_Ndot_heaviside(self.Ephs, Eg, mu, cutoff_angle)
-        Ndot_in = self.atm_data.retrieve_Ndot_heaviside(Eg,cutoff_angle)
-        J = q * (Ndot_out-Ndot_in)
-        return J*mu
+    def current_density(self, mu, Eg, cutoff_angle, eta_ext=1, consider_nonrad = False):
+        Ndot_out = self.TRD_body.retrieve_Ndot_heaviside(Eg = Eg, mu = mu, cutoff_angle = cutoff_angle)
+        Ndot_in = self.atm.retrieve_Ndot_heaviside(Eg = Eg, cutoff_angle = cutoff_angle)
+
+        if consider_nonrad:
+            Ndot_out_mu0 = self.TRD_body.retrieve_Ndot_heaviside(Eg = Eg, mu = 0, cutoff_angle = cutoff_angle)
+            J = q * (Ndot_out/eta_ext - Ndot_in + Ndot_out_mu0*(1-1/eta_ext))
+        else:
+            J = q * (Ndot_out - Ndot_in)
+
+        return J
+
+    def power_density(self, mu, Eg, cutoff_angle, eta_ext=1, consider_nonrad=False):
+        J = self.current_density(mu, Eg, cutoff_angle, eta_ext, consider_nonrad)
+        return J * mu
 
     def optimize_mu(self, Eg, cutoff_angle):
         opt_mu_dwh = minimize_scalar(self.power_density, bounds=[-Eg, 0],
                                      args=(Eg, cutoff_angle))
         return {'max power':opt_mu_dwh.fun, 'Vmpp':opt_mu_dwh.x}
 
-
-def planck_dist(Eph, mu, kT):
-    '''
-    :param Eph: Particular photon energy, in eV
-    :param mu: Fermi level splitting, in eV
-    :param kT: in eV
-    :return: Photon flux for the given eV, in [s-1.m-2.eV-1], calculated using generalized Planck's law (blackbody with temp T if mu=0).
-    '''
-    return ((2*np.pi)/(c**2*(h/q)**3))* Eph**2/(np.exp((Eph-mu)/kT)-1)
-
-def spec_pflux_planckheaviside(Eph, Eg, mu, kT):
-    '''
-    Photon density flux calculated for using Planck's law for a semiconductor with Eg, at temp T and Fermi level split mu.
-    Uses Heaviside weighing (i.e. 100% emission above Eg, 0 below Eg)
-    :param Eph: Particular photon energy (or array) [eV]
-    :param Eg: Bandgap [eV]
-    :param mu: Fermi level splitting, [eV]
-    :param kT: k*temperature of emitting body [eV]
-    :return: Photon density flux [s-1.m-2] for the given eV. If Eph is an array, returns array of [s-1.m-2/eV] values.
-    '''
-    hvs_weight = np.heaviside(Eph-Eg, 0.5)
-    pd_ys = planck_dist(Eph, mu, kT)
-    return pd_ys*hvs_weight
-
-def Ndot_boltzmann(Eg, T, mu): # particle flux density
-    # accurate for large band gaps / large negative bias
-    kT = kb*T/q # convert to eV to match units of Eg
-    N = ((2*np.pi)/(c**2*h**3))*np.exp((mu-Eg)/kT)*kT*(Eg**2 + 2*Eg*kT + 2*kT**2)
-    #eq 13 from Pusch et al 2019
-    return N*q**3
-
-def Ndot_planckheaviside(Ephs, Eg, mu, kT):
-    spec_pflux = spec_pflux_planckheaviside(Ephs, Eg, mu, kT)
-    pflux = np.trapz(spec_pflux, Ephs)
-    return pflux
-
-def Ndot_downwellheaviside(Eg, Ephs, downwell_array):
-    get_heavisided = np.heaviside(Ephs - Eg, 0.5) * downwell_array
-    pflux = np.trapz(get_heavisided, Ephs)
-    return pflux
-
-def neg_powerdensity_downwellheaviside(mu, Eg, Ephs_p, kT_converter, Ephs_atm, phot_flux_atm):
-    # used to optimize over mu, with scipy
-    Ndot_out = Ndot_planckheaviside(Ephs_p, Eg, mu, kT_converter)
-    Ndot_in = Ndot_downwellheaviside(Eg, Ephs_atm, phot_flux_atm)
-    J = q*(Ndot_out-Ndot_in)
-    return mu*J
-
-def neg_powerdensity_plancks(mu, Eg, Ephs, kT_convert, kT_env):
-    # used to optimize over mu, with scipy
-    Ndot_out = Ndot_planckheaviside(Ephs, Eg, mu, kT_convert)
-    Ndot_in = Ndot_planckheaviside(Ephs, Eg, 0, kT_env)
-    J = q * (Ndot_out - Ndot_in)
-    return mu * J
 
 class optimize_powerdensity:
     def __init__(self, trd_in_environment, args_to_opt, args_to_fix):

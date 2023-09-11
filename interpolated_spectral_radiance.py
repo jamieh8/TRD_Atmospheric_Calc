@@ -64,7 +64,7 @@ for cutoff_angle in cutoff_angles:
     spectral_photon_flux = atm_data.spectral_data_with_cutoffangle(angle_array, cutoff_angle)
     axs[0].plot(Ephs, spectral_photon_flux, label=cutoff_angle)
 
-    Ndot_vs_Eg = np.vectorize(Ndot_downwellheaviside, excluded=[1,2])(Egs, Ephs, spectral_photon_flux)
+    Ndot_vs_Eg = np.vectorize(atm_data.retrieve_Ndot_heaviside)(Egs, cutoff_angle)
     axs[1].plot(Egs, Ndot_vs_Eg)
 
 

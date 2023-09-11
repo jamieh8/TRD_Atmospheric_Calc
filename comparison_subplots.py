@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 from TRD_Atmospheric_Functions import *
 
-cwv, T = 10, 296.724
+# cwv, T = 10, 296.724
 # cwv, T = 24, 304.868
-# cwv, T = 54, 303.512
+cwv, T = 54, 303.512
 
 atm_data = atmospheric_dataset(cwv=cwv)
 emitter_planck = planck_law_body(T=T)
@@ -24,11 +24,11 @@ for ai, cutoff_angle in enumerate(cutoff_angles):
                         'cutoff angle':cutoff_angle}]
 
 
-include_photflux_plots = True
+include_photflux_plots = False
 if include_photflux_plots:
     fig_pf, axs_pf = plt.subplots(2,2, layout='tight')
 
-Egs = np.arange(0.062, 0.20, 0.002)
+Egs = np.arange(0.062, 0.15, 0.002)
 
 include_muopt_plots = True
 if include_muopt_plots:

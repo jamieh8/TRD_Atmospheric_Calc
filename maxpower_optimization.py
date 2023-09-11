@@ -14,8 +14,8 @@ Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
 
 to_plot = []
 to_plot += [{'cwv':10, 'Tc':296.724, 'label':'cwv10', 'colour':'deeppink'}]
-to_plot += [{'cwv':24, 'Tc':304.868, 'label':'cwv24', 'colour':'steelblue'}]
-to_plot += [{'cwv':54, 'Tc':303.512, 'label':'cwv54', 'colour':'seagreen'}]
+# to_plot += [{'cwv':24, 'Tc':304.868, 'label':'cwv24', 'colour':'steelblue'}]
+# to_plot += [{'cwv':54, 'Tc':303.512, 'label':'cwv54', 'colour':'seagreen'}]
 
 alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
 alg_de = pg.de(gen=50, ftol=1e-5)
@@ -48,8 +48,8 @@ fig, axs = plt.subplots(1,len(args_to_opt)+1, layout='tight')
 
 for case in to_plot:
     atm_data = atmospheric_dataset(case['cwv'])
-    emitter_planck = planck_law_body(T=case['Tc'])
-    combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data, Ephs)
+    emitter_planck = planck_law_body(T=case['Tc'], Ephs=Ephs)
+    combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data)
 
     max_pds = []
     opt_vals = []
@@ -106,8 +106,8 @@ for opi, opt_label in enumerate(args_to_opt):
 # cwv, T = 54, 303.512
 #
 # atm_data = atmospheric_dataset(cwv)
-# emitter_planck = planck_law_body(T)
-# combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data, Ephs)
+# emitter_planck = planck_law_body(T, Ephs)
+# combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data)
 #
 # # filename = f'PD_cutoff{cutoff_angle}_Egs_0.062_02_100_mus_-01_0_100.csv'
 # filename = f'PD_cwv{cwv}_optmu_Egs_0.062_015_20_cutoffangle_10_90_20.csv'
