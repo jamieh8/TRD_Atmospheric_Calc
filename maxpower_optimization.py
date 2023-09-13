@@ -8,15 +8,6 @@ from matplotlib.colors import Normalize
 
 Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
 
-# cwv, T = 10, 296.724
-# cwv, T = 24, 304.868
-# cwv, T = 54, 303.512
-
-to_plot = []
-to_plot += [{'cwv':10, 'Tc':296.724, 'label':'cwv10', 'colour':'deeppink'}]
-# to_plot += [{'cwv':24, 'Tc':304.868, 'label':'cwv24', 'colour':'steelblue'}]
-# to_plot += [{'cwv':54, 'Tc':303.512, 'label':'cwv54', 'colour':'seagreen'}]
-
 alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
 alg_de = pg.de(gen=50, ftol=1e-5)
 
@@ -35,21 +26,47 @@ alg_de = pg.de(gen=50, ftol=1e-5)
 # xlabel_str = 'Bandgap, E$_g$ [eV]'
 
 # Sweep Eg, optimize over mu and cutoff angle
-args_to_opt = ['mu', 'cutoff_angle']
-x_vals_sweep = np.linspace(0.062,0.15,20)  # bandgaps, in [eV]
-arg_sweep_str = 'Eg'
-arg_fix_extra = {}
-xlabel_str = 'Bandgap, E$_g$ [eV]'
+# args_to_opt = ['mu', 'cutoff_angle']
+# x_vals_sweep = np.linspace(0.062,0.15,20)  # bandgaps, in [eV]
+# arg_sweep_str = 'Eg'
+# arg_fix_extra = {}
+# xlabel_str = 'Bandgap, E$_g$ [eV]'
 
+# Sweep cutoff angle, optimize over mu (with Eg defined per case)
+args_to_opt = ['mu']
+x_vals_sweep = np.arange(10,95,5)
+arg_sweep_str = 'cutoff_angle'
+xlabel_str = 'Cutoff Angle, $\\theta_c$ [$\circ$]'
+
+to_plot = []
+
+
+# Setup cases to plot
+for AD_dict in [
+    {'cwv':10, 'Tc':296.724, 'col':'deeppink', 'Eg':0.094},
+    {'cwv':24, 'Tc':304.868, 'col':'steelblue', 'Eg':0.094},
+    {'cwv':54, 'Tc':303.512, 'col':'seagreen', 'Eg':0.1}
+]:
+    Eg = AD_dict['Eg']
+    cwv = AD_dict['cwv']
+    TRD = planck_law_body(T=AD_dict['Tc'], Ephs=Ephs)
+    atm_data = atmospheric_dataset(cwv)
+    comb_TRDenv = TRD_in_atmosphere(TRD, atm_data)
+    to_plot += [{'TRD in env':comb_TRDenv, 'label':f'cwv{cwv}, E$_g$={Eg}', 'colour':AD_dict['col'], 'arg_fix_extra': {'Eg':Eg}}]
+
+TRD_300K = planck_law_body(T=300, Ephs=Ephs)
+for Te, colT in zip([3,200],['black','dimgrey']):
+    env_T = planck_law_body(T=Te, Ephs=Ephs)
+    comb_TRDenv = TRD_in_atmosphere(TRD_300K, env_T)
+    to_plot += [{'TRD in env':comb_TRDenv, 'label':f'300K/{Te}K, E$_g$=0.02', 'colour':colT, 'arg_fix_extra': {'Eg':0.02}}]
 
 # Define subplots based on optimization
 fig, axs = plt.subplots(1,len(args_to_opt)+1, layout='tight')
-
+relative_change = True
 
 for case in to_plot:
-    atm_data = atmospheric_dataset(case['cwv'])
-    emitter_planck = planck_law_body(T=case['Tc'], Ephs=Ephs)
-    combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data)
+    combined_trd_env = case['TRD in env']
+    arg_fix_extra = case['arg_fix_extra']
 
     max_pds = []
     opt_vals = []
@@ -58,15 +75,19 @@ for case in to_plot:
         arg_f = {arg_sweep_str: xval}
         if arg_fix_extra != None:
             arg_f.update(arg_fix_extra)
-        opt_xs, opt_pd = get_best_pd(combined_trd_env, args_to_opt=args_to_opt, args_to_fix=arg_f, alg = alg_de)
-        max_pds += [opt_pd]
-        opt_vals += [opt_xs]
+        opt_xs, opt_pd = get_best_pd(combined_trd_env, args_to_opt=args_to_opt, args_to_fix=arg_f, alg = alg_powell)
+        max_pds += [opt_pd[0]]
+        opt_vals += [list(opt_xs.values())]
 
         # mu_90, pd_90 = get_best_pd(combined_trd_env, args_to_opt=['mu'], args_to_fix={arg_sweep_str: xval, 'cutoff_angle':90}, alg = alg_powell)
         # max_pds_90 += [pd_90]
         # mus_90 += [mu_90]
 
-    axs[0].plot(x_vals_sweep, max_pds, c=case['colour'], label=case['label'])
+    if relative_change:
+        pd_ys = max_pds/max_pds[-1]
+    else:
+        pd_ys = max_pds
+    axs[0].plot(x_vals_sweep, pd_ys, c=case['colour'], label=case['label'])
 
     # Secondary plot showing x values corresponding to best P.D.
     opt_vals_t = np.transpose(np.array(opt_vals))
@@ -79,11 +100,17 @@ for case in to_plot:
     # axs[2].plot(x_vals_sweep, len(x_vals_sweep)*[90],'--', c=case['colour'])
 
 pd_ax = axs[0]
-pd_ax.set_ylabel(r'Power Density [W.m$^{-2}$]')
+if relative_change:
+    pd_ax.set_ylabel(f'P / P({x_vals_sweep[-1]:.0f})')
+else:
+    pd_ax.set_ylabel(r'Power Density [W.m$^{-2}$]')
 pd_ax.set_xlabel(xlabel_str)
 pd_ax.legend()
 
-translate_to_label = {'Eg':'Bandgap, E$_g$ [eV]', 'mu':'V [V] / $\mu$ [eV]', 'cutoff_angle': 'Cutoff Angle [$\circ$]'}
+translate_to_label = {'Eg':'Bandgap, E$_g$ [eV]', 'mu':'V$_{mpp}$ [V]', 'cutoff_angle': 'Cutoff Angle [$\circ$]'}
+if 'mu' in args_to_opt:
+    args_to_opt.remove('mu')
+    args_to_opt += ['mu']
 for opi, opt_label in enumerate(args_to_opt):
     axs[opi+1].set_ylabel(translate_to_label[opt_label])
     axs[opi+1].set_xlabel(xlabel_str)
@@ -93,25 +120,27 @@ for opi, opt_label in enumerate(args_to_opt):
 # ----------------- Heatmap for testing optimizer ----------------- #
 # fig, axs = plt.subplots(1,1)
 # Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
-# Egs = np.linspace(0.062, 0.15, 20)
+# Egs = np.linspace(0.001, 0.15, 40)
 # # mus = np.linspace(-0.1, 0, 100)
 # # cutoff_angle = 70
 # cutoff_angles = np.linspace(10,90,20)
 #
-# alg = pg.scipy_optimize(method='Powell', tol=1e-5)
-#
+# # alg = pg.scipy_optimize(method='Powell', tol=1e-5)
+# alg = pg.de(gen=50, ftol=1e-5)
 #
 # # cwv, T = 10, 296.724
 # # cwv, T = 24, 304.868
-# cwv, T = 54, 303.512
+# # cwv, T = 54, 303.512
 #
-# atm_data = atmospheric_dataset(cwv)
-# emitter_planck = planck_law_body(T, Ephs)
+# Tc = 300
+# Te = 200
+# atm_data = planck_law_body(Te, Ephs)
+# emitter_planck = planck_law_body(Tc, Ephs)
 # combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data)
 #
 # # filename = f'PD_cutoff{cutoff_angle}_Egs_0.062_02_100_mus_-01_0_100.csv'
-# filename = f'PD_cwv{cwv}_optmu_Egs_0.062_015_20_cutoffangle_10_90_20.csv'
-#
+# # filename = f'PD_cwv{cwv}_optmu_Egs_0.062_015_20_cutoffangle_10_90_20.csv'
+# # filename = f'PD_Te3K_Tc300K_optmu_Egs_0.001_015_40_cutoffangle_10_90_20.csv'
 #
 # # Generate new data
 # pds_2d = []
@@ -124,9 +153,10 @@ for opi, opt_label in enumerate(args_to_opt):
 #     #     else:
 #     #         pd = combined_trd_env.power_density(mu, Eg, cutoff_angle=cutoff_angle)
 #         best_mu, best_pd = get_best_pd(combined_trd_env, args_to_opt=['mu'], args_to_fix={'Eg':Eg, 'cutoff_angle':cutoff_angle}, alg=alg)
+#         # print(best_mu['mu'])
 #         row += [best_pd[0]]
 #     pds_2d += [row]
-# np.savetxt(filename, np.asarray(pds_2d), delimiter = ',')
+# # np.savetxt(filename, np.asarray(pds_2d), delimiter = ',')
 #
 # # Import existing data
 # # pds_2d = np.loadtxt(filename, delimiter=',', dtype=float)
@@ -157,7 +187,7 @@ for opi, opt_label in enumerate(args_to_opt):
 # # h_ax.set_xlabel('V [V] / $\mu$ [eV]')
 #
 # hmap = h_ax.pcolor(cutoff_angles, Egs, pds_2d, cmap='plasma', shading='nearest')
-# h_ax.set_xlabel('Cutoff Angle ($\circ$)')
+# h_ax.set_xlabel('Cutoff Angle, $\\theta_c$ [$\circ$]')
 #
 # cbar = plt.colorbar(hmap)
 # cbar.ax.tick_params(labelsize=10)
@@ -165,6 +195,6 @@ for opi, opt_label in enumerate(args_to_opt):
 # cbar.ax.set_ylabel(r'Power Density [W.m$^{-2}$]')
 # h_ax.set_ylabel('Bandgap, E$_g$ [eV]')
 #
-# plt.title(f'Optimized over $\mu$, cwv {cwv}')
+# plt.title(f'Optimized over $\mu$, T$_e$ = {Te}K')
 
 plt.show()

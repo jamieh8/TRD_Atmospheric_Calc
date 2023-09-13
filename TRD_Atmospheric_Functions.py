@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import copy
 import xarray as xr
 import pygmo as pg
 from solcore.constants import kb, c, h, q
@@ -240,23 +241,27 @@ class TRD_in_atmosphere:
 class optimize_powerdensity:
     def __init__(self, trd_in_environment, args_to_opt, args_to_fix):
         self.trd_in_env = trd_in_environment
-        self.args_to_opt = args_to_opt  # list of strings with arguments to optimize
         self.args_to_fix = args_to_fix  # dict with fixed values to use
+        self.args_to_opt = args_to_opt  # list of strings with arguments to optimize
 
     def fitness(self, x):
         # assemble arguments
         new_args = self.args_to_fix
         for ai, opt_args in enumerate(self.args_to_opt):
-            new_args.update({opt_args:x[ai]})
+            if opt_args == 'mu_frac':
+                new_args.update({'mu':x[ai]*new_args['Eg']})
+                # ^ require 'mu_frac' to be populated last, so that 'Eg' is already defined
+            else:
+                new_args.update({opt_args:x[ai]})
+
 
         power_density = self.trd_in_env.power_density(**new_args)
-
         return [power_density]
 
     def get_bounds(self):
         # bounds for each argument, for reference
         bound_ref = {'Eg':{'min':0.062, 'max':0.15},
-                     'mu':{'min':-0.15, 'max':0},
+                     'mu_frac':{'min':-1, 'max':0},
                      'cutoff_angle':{'min':10, 'max':90}}
 
         # retrieve relevant bounds, for the arguments being optimized
@@ -276,8 +281,15 @@ def get_best_pd(trd_in_environment, args_to_opt, args_to_fix, alg):
     :param alg: pygmo algorithm to use for optimization
     :return: best_x (vector, order and contents specified by args_to_opt list), best_pd ("smallest" power density found, W.m-2)
     '''
+
+    # if mu is to be optimized, replace ID string with 'mu_frac', and ensure it is last
+    args_to_opt_mod = copy.deepcopy(args_to_opt)
+    if 'mu' in args_to_opt_mod:
+        args_to_opt_mod.remove('mu')
+        args_to_opt_mod += ['mu_frac']
+
     # define problem with UDP
-    prob = pg.problem(optimize_powerdensity(trd_in_environment, args_to_opt, args_to_fix))
+    prob = pg.problem(optimize_powerdensity(trd_in_environment, args_to_opt_mod, args_to_fix))
 
     # initial population
     pop = pg.population(prob, size=10)
@@ -288,4 +300,16 @@ def get_best_pd(trd_in_environment, args_to_opt, args_to_fix, alg):
     best_pd = pop.champion_f
     best_x = pop.champion_x
 
-    return best_x, best_pd
+    x_opt_dict = {}
+    for bxi, argo in zip(best_x, args_to_opt_mod):
+        if argo == 'mu_frac':
+            # get Eg
+            try:
+                Eg = args_to_fix['Eg']
+            except:
+                Eg = x_opt_dict['Eg']
+            x_opt_dict.update({'mu':Eg*bxi})
+        else:
+            x_opt_dict.update({argo:bxi})
+
+    return x_opt_dict, best_pd
