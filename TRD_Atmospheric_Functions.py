@@ -86,8 +86,10 @@ class atmospheric_dataset:
             new_array = new_array * 1e4  # [W.m-2.(sr-1)/cm-1]
         elif yvals == 's-1.m-2':
             new_array = new_array * 1e4 / (self.photon_energies * q)  #[W.m-2.(sr-1)/cm-1] / [eV][J/eV] --> [s-1.m-2.(sr-1)/cm-1]
+        elif yvals =='W.cm-2':
+            pass
         else:
-            print('yvals string not recognized. Returning spectral array in default W.m-2')
+            print('yvals string not recognized. Returning spectral array in default W.cm-2')
 
         if xvals !='cm-1':
             if xvals == 'eV':
