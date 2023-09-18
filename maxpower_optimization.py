@@ -4,6 +4,7 @@ from scipy.optimize import minimize_scalar
 from matplotlib.colors import Normalize
 
 
+
 # ----------------- Line/Sweep Optimization Plotter -----------------
 
 Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]

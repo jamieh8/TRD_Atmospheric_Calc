@@ -18,6 +18,9 @@ def convert_from(array_in, units_in, units_out, corresponding_xs=None):
             phot_energies_J = h * c * (1e2*array_in)  # E = hf = hc v, [m-1]*[m.s-1][J.s] --> [J]
             return phot_energies_J / q  # [J] --> [eV]
 
+    if units_in == 'photon energy [eV]':
+        if units_out == 'wavenumber [cm-1]':
+            return array_in * q / (h*c*1e2)
 
     elif units_in == 'per wavenumber [/cm-1]':
 
@@ -198,7 +201,7 @@ class planck_law_body:
         int_sinz_cosz = np.sin(np.radians(cutoff_angle))**2 / 2
         return 2*np.pi * self.angle_spectral_photon_flux(Eph, mu) * int_sinz_cosz
 
-    def retrieve_Ndot_heaviside(self, Eg, mu=0, cutoff_angle=90):
+    def retrieve_Ndot_heaviside(self, Eg, cutoff_angle=90, mu=0):
         '''
         :param Ephs: Array of photon energies to use, in [eV]
         :param Eg: Bandgap, in [eV]
