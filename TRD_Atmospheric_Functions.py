@@ -172,9 +172,14 @@ class atmospheric_dataset:
         return spectral_photon_flux  # [s-1.m-2/eV]
 
     def retrieve_Ndot_heaviside(self, Eg, cutoff_angle):
-        angle_array = np.linspace(0,90,100)
+        if cutoff_angle == None:
+            # if cutoff_angle None, use the diffusivity approximation
+            spec_phot_flux = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
+        else:
+            angle_array = np.linspace(0,90,100)
+            spec_phot_flux = self.spectral_data_with_cutoffangle(angle_array, cutoff_angle)
+
         Ephs = self.photon_energies
-        spec_phot_flux = self.spectral_data_with_cutoffangle(angle_array, cutoff_angle)
         spec_pf_heavisided = spec_phot_flux * np.heaviside(Ephs-Eg, 0.5)
         return np.trapz(spec_pf_heavisided, Ephs)
 
@@ -210,6 +215,9 @@ class planck_law_body:
         '''
         Ephs = self.Ephs
         hvs_weight = np.heaviside(Ephs-Eg, 0.5)
+        if cutoff_angle == None:
+            cutoff_angle = 90
+            # cutoff angle of None used for diffusivity approx. in planck body case, diff = 90 (same "cost")
         phot_flux = self.spectral_photon_flux(Ephs, mu, cutoff_angle)
         phot_flux_heavisided = hvs_weight*phot_flux
 
@@ -267,7 +275,8 @@ class optimize_powerdensity:
         # bounds for each argument, for reference
         bound_ref = {'Eg':{'min':0.062, 'max':0.15},
                      'mu_frac':{'min':-1, 'max':0},
-                     'cutoff_angle':{'min':10, 'max':90}}
+                     'cutoff_angle':{'min':10, 'max':90},
+                     'eta_ext':{'min':0.001, 'max':1}}
 
         # retrieve relevant bounds, for the arguments being optimized
         mins, maxs = [], []

@@ -54,7 +54,7 @@ for ds in datsets:
 
 
 include_photflux_plots = True
-include_muopt_plots = True
+include_muopt_plots = False
 include_heaviside_ex = False
 
 if include_photflux_plots:
@@ -118,6 +118,15 @@ for sample_dct in comparison_lst:
 
 
 if include_photflux_plots:
+    # add reference line
+    for ri in [0,1]:
+        for ci in [0,1]:
+            ylim_max = axs_pf[ri][ci].get_ylim()[1]
+            E_ref = 0.16
+            axs_pf[ri][ci].plot(2*[E_ref],[0,1.1*ylim_max], '--k')
+            axs_pf[ri][ci].text(x=E_ref+0.001, y=ylim_max/2, s=f'{E_ref} eV')
+            axs_pf[ri][ci].set_ylim([0,ylim_max])
+
     # add heaviside demo
     Eg = 0.08  # [eV]
     first_plt_dct = comparison_lst[0]

@@ -5,12 +5,10 @@ import numpy as np
 from TRD_Atmospheric_Functions import *
 
 
-# Drawing I-V, power curves
 cmap_plasma = matplotlib.colormaps['plasma']
 cmap_orange = matplotlib.colormaps['Oranges']
 cmap_pink = matplotlib.colormaps['RdPu']
 cmap_purple = matplotlib.colormaps['Purples']
-
 
 Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
 # Egs_planck = np.arange(0.001, 0.20, 0.02)
@@ -96,10 +94,11 @@ for Te, linestyle in zip([Te_07], ['--']): #zip([Te_001, Te_07], ['-', '--']):
 
 
 
-fig_rs, axs_rs = plt.subplots(1, 2, layout='tight')
+fig_rs, axs_rs = plt.subplots(1, 3, layout='tight')
 rad_eff_sweep = np.linspace(0.01,1,10)
 # rad_eff_sweep = np.logspace(-2,0,num=10,base=10)
 alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
+args_to_opt = ['mu', 'Eg']
 
 schemes_to_plot = []
 for Te, linestyle in zip([3, 210], ['-','--']):
@@ -114,38 +113,48 @@ for cwv, cwv_col in zip([10,24,54],['deeppink', 'steelblue', 'seagreen']):
     schemes_to_plot += [{'label':f'cwv{cwv}, '+'$\eta_{rad}$=', 'colour':cwv_col, 'linestyle':'-',
                  'Eg':Eg, 'TRD in atm': combined_cwv}]
 
-relative_change = False
+relative_change = True
 
 for scheme in schemes_to_plot:
     TRD_in_atm_obj = scheme['TRD in atm']
     i_colour = scheme['colour']
     # Sweep rad efficiency
-    Vmpps = []
     maxPds = []
+    opt_vals = []
     for eta in rad_eff_sweep:
-        opt_xs, opt_pd = get_best_pd(TRD_in_atm_obj, args_to_opt=['mu'],
-                                     args_to_fix={'Eg':Eg, 'cutoff_angle':90, 'eta_ext':eta, 'consider_nonrad':True}, alg=alg_powell)
-        Vmpps += [opt_xs[0]]
+        opt_xs, opt_pd = get_best_pd(TRD_in_atm_obj, args_to_opt=args_to_opt,
+                                     args_to_fix={'cutoff_angle':90, 'eta_ext':eta, 'consider_nonrad':True}, alg=alg_powell)
+        opt_vals += [list(opt_xs.values())]
         maxPds += [opt_pd[0]]
 
     if relative_change:
         ys1 = maxPds/maxPds[-1]
-        ys2 = Vmpps/Vmpps[-1]
+        # ys2 = Vmpps/Vmpps[-1]
     else:
-        ys1, ys2 = maxPds, Vmpps
+        ys1 = maxPds
 
     axs_rs[0].plot(rad_eff_sweep, ys1, scheme['linestyle'], label = scheme['label'], color=i_colour)  # current
-    axs_rs[1].plot(rad_eff_sweep, ys2, scheme['linestyle'], label = scheme['label'], color=i_colour)  # current
+    # axs_rs[1].plot(rad_eff_sweep, ys2, scheme['linestyle'], label = scheme['label'], color=i_colour)  # current
+
+    # Secondary plot showing x values corresponding to best P.D.
+    opt_vals_t = np.transpose(np.array(opt_vals))
+    for ir, row in enumerate(opt_vals_t):
+        axs_rs[ir+1].plot(rad_eff_sweep, row, scheme['linestyle'], c=scheme['colour'], label=scheme['label'])
 
 for ax in axs_rs:
     ax.set_xlabel('$\eta_{ext}$')
 
+translate_to_label = {'Eg':'Bandgap, E$_\mathrm{g}$ [eV]', 'mu':'V$_\mathrm{mpp}$ [V]', 'cutoff_angle': 'Cutoff Angle [$\circ$]'}
+if 'mu' in args_to_opt:
+    args_to_opt.remove('mu')
+    args_to_opt += ['mu']
+for opi, opt_label in enumerate(args_to_opt):
+    axs_rs[opi+1].set_ylabel(translate_to_label[opt_label])
+
 if relative_change:
     axs_rs[0].set_ylabel('P / P($\eta$=1)')
-    axs_rs[1].set_ylabel('V$_{mpp}$ / V$_{mpp}(\eta=1)$')
 else:
     axs_rs[0].set_ylabel('Max Power Density [W.m$^{-2}$]')
-    axs_rs[1].set_ylabel('V$_{mpp}$ [V]')
 
 
 plt.show()
