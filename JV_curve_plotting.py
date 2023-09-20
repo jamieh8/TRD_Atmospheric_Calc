@@ -11,23 +11,23 @@ Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
 
 Egs_planck = np.arange(0.001, 0.20, 0.02)
 
-cutoff_angle = 90
+cutoff_angle = None
 
 Egs_dw = np.arange(0.15, 0.20, 0.002)
-# Egs = [0.02]
+Egs = [0.18]
 
 to_plot = []
 
 cwv, Tc = 10, 296.724
 emitter = planck_law_body(Tc, Ephs)
 
-# atm_dataset = atmospheric_dataset(cwv)
-# combined = TRD_in_atmosphere(emitter, atm_dataset)
-# to_plot += [{'label':'cwv10', 'colormap':cmap_pink, 'atmosphere data':atm_dataset, 'TRD':emitter, 'Egs':Egs_dw, 'TRD in atm': combined}]
+atm_dataset = atmospheric_dataset(cwv)
+combined = TRD_in_atmosphere(emitter, atm_dataset)
+to_plot += [{'label':'cwv10', 'colormap':cmap_pink, 'atmosphere data':atm_dataset, 'TRD':emitter, 'Egs':Egs, 'TRD in atm': combined}]
 
-atm_100K = planck_law_body(100, Ephs)
-combined_atm100K = TRD_in_atmosphere(emitter, atm_100K)
-to_plot += [{'label':'100K env', 'colormap':cmap_orange, 'atmosphere data':atm_100K, 'TRD':emitter, 'Egs':Egs_planck, 'TRD in atm': combined_atm100K}]
+# atm_100K = planck_law_body(100, Ephs)
+# combined_atm100K = TRD_in_atmosphere(emitter, atm_100K)
+# to_plot += [{'label':'100K env', 'colormap':cmap_orange, 'atmosphere data':atm_100K, 'TRD':emitter, 'Egs':Egs_planck, 'TRD in atm': combined_atm100K}]
 
 
 for scheme in to_plot:
@@ -46,10 +46,12 @@ for scheme in to_plot:
 
         # N_out, emitted from converter
         # N_in, emitted from environment, abs by converter
-        N_out_mu_planck = np.vectorize(TRD_obj.retrieve_Ndot_heaviside)(Eg, mus, cutoff_angle)
-        N_in_mu = atm_obj.retrieve_Ndot_heaviside(Eg, mu=0, cutoff_angle=cutoff_angle)
+        N_out_mu_planck = np.vectorize(TRD_obj.retrieve_Ndot_heaviside)(Eg, cutoff_angle, mus)
+        try:
+            N_in_mu = atm_obj.retrieve_Ndot_heaviside(Eg, mu=0, cutoff_angle=cutoff_angle)
+        except:
+            N_in_mu = atm_obj.retrieve_Ndot_heaviside(Eg, cutoff_angle=cutoff_angle)
 
-        # calculate and plot with N abs from env from (1/orange) blackbody at T=30K, (2/pink) downwelling data
         J_mu = q*(N_out_mu_planck - N_in_mu)  # [J] [m-2.s-1] --> A.m-2. J = N_out - N_in
 
         pds = np.vectorize(TRD_in_atm_obj.power_density)(mus, Eg, cutoff_angle)

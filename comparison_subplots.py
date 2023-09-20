@@ -7,6 +7,7 @@ def Eph_to_sx(x):
 def sx_to_Ephs(x):
     return convert_from(x, units_in='wavenumber [cm-1]', units_out='photon energy [eV]')
 
+
 comparison_lst = []
 
 # comparing different cutoff angles
@@ -54,14 +55,16 @@ for ds in datsets:
 
 
 include_photflux_plots = True
+include_Ndot_diff = True
 include_muopt_plots = False
 include_heaviside_ex = False
 
 if include_photflux_plots:
     fig_pf, axs_pf = plt.subplots(2,2, layout='tight')
+    if include_Ndot_diff:
+        fig_Ndotd, axs_Ndotd = plt.subplots(1,1, layout='tight')
 if include_muopt_plots:
     fig_Popt, axs_Popt = plt.subplots(1,2, layout='tight')
-
 
 
 for sample_dct in comparison_lst:
@@ -89,8 +92,11 @@ for sample_dct in comparison_lst:
             spectral_photon_flux = atm_data.spectral_data_with_cutoffangle(angle_array, cutoff_angle)
         axs_pf[1][0].plot(Ephs, spectral_photon_flux, label=sample_dct['label'], color=sample_dct['color'])
 
-        Ndot_vs_Eg = np.vectorize(atm_data.retrieve_Ndot_heaviside)(Egs, cutoff_angle)
-        axs_pf[1][1].plot(Egs, Ndot_vs_Eg, label=sample_dct['label'], color=sample_dct['color'])
+        Ndot_in = np.vectorize(atm_data.retrieve_Ndot_heaviside)(Egs, cutoff_angle)
+        axs_pf[1][1].plot(Egs, Ndot_in, label=sample_dct['label'], color=sample_dct['color'])
+
+        if include_Ndot_diff:
+            axs_Ndotd.plot(Egs, Ndot_out-Ndot_in, label=sample_dct['label'], color=sample_dct['color'])
 
         if include_heaviside_ex:
             Eg_ex = 0.08
