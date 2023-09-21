@@ -109,6 +109,12 @@ class atmospheric_dataset:
         return new_array
 
     def interpolate_by_angle(self, dat_2D, angle_array):
+        '''
+
+        :param dat_2D:
+        :param angle_array: Array of angles (in degrees) at which to interpolate
+        :return: Interpolated 2D array, in same using as dat_2D. Rows correspond to angles, columns to same spectral units as dat_2D.
+        '''
         # dat_2D in [W.m-2/sr.eV] or [/sr.um]
         dat_2D_int = []
         for xi in range(len(dat_2D[0])):

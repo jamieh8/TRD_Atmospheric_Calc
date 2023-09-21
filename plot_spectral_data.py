@@ -30,7 +30,7 @@ plot_units = [
 fig, axs = plt.subplots(2,len(plot_units), layout='tight')
 
 radiance_labels = ['downwelling_0', 'downwelling_53', 'downwelling_70']
-flux_labels = ['downwelling_flux']#, 'upwelling_flux', 'net_flux']
+flux_labels = ['downwelling_flux', 'upwelling_flux', 'net_flux']
 
 for ci, unit_set in enumerate(plot_units):
     for ri,labels in enumerate([radiance_labels, flux_labels]):
