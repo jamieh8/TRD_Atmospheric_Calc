@@ -42,20 +42,20 @@ for ds in datsets:
 
 
 # comparing blackbody environments
-# Ephs = np.arange(1e-6, 0.31, 0.0001)
-# Egs_bb = np.arange(0,0.2,0.002)
-# emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
-# Tsets = [{'Tc':3, 'colour':'orangered'}, {'Tc':200, 'colour':'orange'}]
-# for Ts in Tsets:
-#     Tc = Ts['Tc']
-#     bb_env = planck_law_body(Tc, Ephs)
-#     comparison_lst += [{'label': f'{Tc}K', 'color': Ts['colour'],
-#                         'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
-#                         'cutoff angle': 90, 'use diffusivity approx': True, 'Egs':Egs_bb}]
+Ephs = np.arange(1e-6, 0.31, 0.0001)
+Egs_bb = np.arange(0,0.2,0.002)
+emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
+Tsets = [{'Tc':3, 'colour':'orangered'}, {'Tc':200, 'colour':'orange'}]
+for Ts in Tsets:
+    Tc = Ts['Tc']
+    bb_env = planck_law_body(Tc, Ephs)
+    comparison_lst += [{'label': f'{Tc}K', 'color': Ts['colour'],
+                        'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
+                        'cutoff angle': 90, 'use diffusivity approx': True, 'Egs':Egs_bb}]
 
 
 include_photflux_plots = True
-include_Ndot_diff = True
+include_Ndot_diff = False
 include_muopt_plots = False
 include_heaviside_ex = False
 
