@@ -5,6 +5,7 @@ import xarray as xr
 import pygmo as pg
 from solcore.constants import kb, c, h, q
 from scipy.optimize import minimize_scalar
+from scipy import interpolate
 
 
 def convert_from(array_in, units_in, units_out, corresponding_xs=None):
@@ -110,7 +111,6 @@ class atmospheric_dataset:
 
     def interpolate_by_angle(self, dat_2D, angle_array):
         '''
-
         :param dat_2D:
         :param angle_array: Array of angles (in degrees) at which to interpolate
         :return: Interpolated 2D array, in same using as dat_2D. Rows correspond to angles, columns to same spectral units as dat_2D.
@@ -118,8 +118,14 @@ class atmospheric_dataset:
         # dat_2D in [W.m-2/sr.eV] or [/sr.um]
         dat_2D_int = []
         for xi in range(len(dat_2D[0])):
-            # for each wavelength, interpolate values for angles specified
-            dat_2D_int += [np.interp(x=angle_array, xp=[0, 53, 70], fp=dat_2D[:, xi])]
+            # for each wavelength/photon energy, interpolate values for angles specified
+            new_x_predict = 1 / np.cos(np.radians(angle_array))
+            new_x_known = 1 / np.cos(np.radians([0,53,70]))
+            y_known = dat_2D[:, xi]
+            scp_int_ext = interpolate.interp1d(new_x_known, y_known, bounds_error=False, fill_value='extrapolate')
+            y_predict = scp_int_ext(new_x_predict)
+
+            dat_2D_int += [y_predict]
 
         dat_2D_int = np.array(dat_2D_int)  # rows correspond to x values (photon energies or wavelengths)
         dat_2D_int = dat_2D_int.transpose()  # rows correspond to angles
@@ -128,10 +134,12 @@ class atmospheric_dataset:
 
     def interpolate_angle_spectral_data(self, angle_array, yvals = 'W.m-2', xvals='eV'):
         '''
+        Retrieves 2D array with directional spectral radiance (expressed in y units requested, plus 'sr-1' for directionality).
+        Passes this 2D array to interpolate_by_angle, to interpolate according to the angle array requested.
         :param angle_array: 1D array of angles, in degrees, at which to interpolate the spectral data.
         :param yvals: 'W.m-2' or 's-1.m-2'
         :param xvals: 'cm-1', 'um', or 'eV'
-        :return: 2D numpy array, with values in [yvals.sr-1.xvals-1]. Rows correspond to angles in angle_array. Columns corresponds to wavelength/photon energy/...
+        :return: 2D numpy array, with values in [yvals.sr-1.xvals-1]. Rows correspond to angles in angle_array. Columns corresponds to spectral values.
         '''
         # build 2D array with angles 0, 53, 70
         dat_2D = []
@@ -140,39 +148,74 @@ class atmospheric_dataset:
         dat_2D = np.array(dat_2D)  # in units [yvals.sr-1.xvals-1]
         return self.interpolate_by_angle(dat_2D, angle_array)
 
-    def retrieve_interpolated_angle_spectral_photflux(self, angle_array):
+    def interpolated_cosDSPDF(self, angle_array):
+        dat_2D = []
+        for col_head in ['downwelling_0', 'downwelling_53', 'downwelling_70']:
+            dat_2D += [self.retrieve_spectral_array('s-1.m-2', 'eV', col_head)]
+        dat_2D = np.array(dat_2D)  # in units [s-1.m-2.sr-1/eV]
+
+        dat_2D_interpolated = []
+
+        angles_rad = np.radians(angle_array)
+        angles_known_rad = np.radians([0,53,70])
+
+        for theta in angles_rad:
+            # check which pair to use:
+            if theta < angles_known_rad[1]:
+                it1, it2 = 0, 1
+            else:
+                it1, it2 = 1, 2
+            theta1, theta2 = angles_known_rad[it1], angles_known_rad[it2]
+
+            angle_multiplier = (1-np.cos(theta)/np.cos(theta1)) / (1/np.cos(theta2)-1/np.cos(theta1))
+
+            L_costheta_int = []
+            for xi in range(len(dat_2D[0])):
+                # for each wavelength / photon energy
+                L_t1 = dat_2D[it1][xi]
+                L_t2 = dat_2D[it2][xi]
+
+                L_costheta = (L_t2-L_t1)*angle_multiplier + L_t1*np.cos(theta)
+                L_costheta_int += [L_costheta]
+
+            dat_2D_interpolated += [L_costheta_int]
+
+        return np.array(dat_2D_interpolated)
+
+    def retrieve_interpolated_cosDSPDF(self, angle_array):
         '''
         Check if interpolated photon flux array exists (with right angle_array). If yes, return it. If no, run interpolation then return it.
         :param angle_array: 1D array of zenith angles, in degrees, at which to interpolate the spectral data.
         :return: 2D numpy array, with values in [s-1.m-2.sr-1.eV-1]. Rows correspond to the zenith angles in angle_array. Columns corresponds to photon energies.
         '''
 
-        if hasattr(self, 'int_ang_spec_photflux') and (self, 'angle_array') and np.array_equal(self.angle_array, angle_array):
-            return self.int_ang_spec_photflux
+        if hasattr(self, 'interpolated_cosDSPDF') and hasattr(self, 'angle_array') and np.array_equal(self.angle_array, angle_array):
+            return self.interpolated_cosDSPDF
         else:
-            self.int_ang_spec_photflux = self.interpolate_angle_spectral_data(angle_array, yvals='s-1.m-2', xvals='eV')
+            self.interpolated_cosDSPDF = self.interpolated_cosDSPDF(angle_array)
             self.angle_array = angle_array
-            return self.int_ang_spec_photflux
+            return self.interpolated_cosDSPDF
 
-    def spectral_data_with_cutoffangle(self, angle_array, cutoff_angle):
+    def spectral_PDF_with_cutoffangle(self, angle_array, cutoff_angle):
         '''
         :param angle_array: 1D array of angles at which to interpolate spectral data, in degrees (0 to 90).
         :param cutoff_angle: zenith angle between 0 and 90, in degrees. Angles smaller than or equal to the cutoff will be 100% "absorbed".
         :return: 1D array, spectral photon density flux [s-1.m-2/eV]
         '''
-        photflux_int_2D = self.retrieve_interpolated_angle_spectral_photflux(angle_array)
+
+        # DSPDF * cos(theta) is computed altogether such to avoid ill-defined DSPDF at theta near 90..
+        photflux_int_2D_timescos = self.retrieve_interpolated_cosDSPDF(angle_array)
         hvs = np.heaviside(cutoff_angle - angle_array, 1)  # using heaviside to select "accepted" angles (*1), or "rejected" (*0)
 
         # integrate over zenith angles
         sin_zenith = np.sin(np.radians(angle_array))  # zenith angle -> theta
-        cos_zenith = np.cos(np.radians(angle_array))
         # d(Omega) = sin(theta) * d(theta) * d(phi), element solid angle
         # cos(theta) factor for Lambertian emitter
         # Spectral_PDF = \int_0^cutoff Directional_Spectral_PDF cos(theta) d(Omega)
         # Spectral_PDF = \int_0^2pi d(phi) \int_0^theta_cutoff Directional_Spectral_PDF cos(theta) sin(theta) d(theta)
         # Spectral_PDF = 2pi \int_0^90 heaviside * Directional_Spectral_PDF cos(theta) sin(theta) d(theta)
 
-        rad_hv_sinz = np.transpose(np.transpose(photflux_int_2D) * hvs * sin_zenith * cos_zenith)  # [s-1.m-2.sr-1/eV]*[rad]
+        rad_hv_sinz = np.transpose(np.transpose(photflux_int_2D_timescos) * hvs * sin_zenith)  # [s-1.m-2.sr-1/eV]*[rad]
         spectral_photon_flux = 2 * np.pi * np.trapz(rad_hv_sinz, np.radians(angle_array), axis=0)   # [s-1.m-2.rad-1/eV]*[rad]
 
         return spectral_photon_flux  # [s-1.m-2/eV]
@@ -182,8 +225,9 @@ class atmospheric_dataset:
             # if cutoff_angle None, use the diffusivity approximation
             spec_phot_flux = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
         else:
+            # if cutoff angle is given, perform integral over interpolated angles
             angle_array = np.linspace(0,90,100)
-            spec_phot_flux = self.spectral_data_with_cutoffangle(angle_array, cutoff_angle)
+            spec_phot_flux = self.spectral_PDF_with_cutoffangle(angle_array, cutoff_angle)
 
         Ephs = self.photon_energies
         spec_pf_heavisided = spec_phot_flux * np.heaviside(Ephs-Eg, 0.5)
@@ -214,7 +258,6 @@ class planck_law_body:
 
     def retrieve_Ndot_heaviside(self, Eg, cutoff_angle=90, mu=0):
         '''
-        :param Ephs: Array of photon energies to use, in [eV]
         :param Eg: Bandgap, in [eV]
         :param mu: Fermi level split, in [eV]
         :return: Photon density flux [s-1.m-2]

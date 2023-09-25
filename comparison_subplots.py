@@ -11,47 +11,49 @@ def sx_to_Ephs(x):
 comparison_lst = []
 
 # comparing different cutoff angles
-# cwv, T = 10, 296.724
+cwv, T = 10, 296.724
 # cwv, T = 24, 304.868
 # cwv, T = 54, 303.512
-# atm_data = atmospheric_dataset(cwv=cwv)
-# Ephs = atm_data.photon_energies
-# emitter_planck = planck_law_body(T=T, Ephs=Ephs)
+atm_data = atmospheric_dataset(cwv=cwv)
+Ephs = atm_data.photon_energies
+emitter_planck = planck_law_body(T=T, Ephs=Ephs)
 angle_array = np.linspace(0,90,100)
-#
-# cmap = plt.get_cmap('tab10')
-# cutoff_angles = np.arange(10,95,20)
-# for ai, cutoff_angle in enumerate(cutoff_angles):
-#     comparison_lst += [{'label':f'cwv{cwv}, cutoff {cutoff_angle}', 'color':cmap(ai),
-#                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
-#                         'cutoff angle':cutoff_angle}]
+Egs_AD = np.arange(0.062, 0.2, 0.002)
+
+cmap = plt.get_cmap('tab10')
+cutoff_angles = np.arange(10,95,20)
+for ai, cutoff_angle in enumerate(cutoff_angles):
+    comparison_lst += [{'label':f'cwv{cwv}, cutoff {cutoff_angle}', 'color':cmap(ai),
+                        'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
+                        'cutoff angle':cutoff_angle, 'Egs':Egs_AD, 'use diffusivity approx':False}]
+
 
 # comparing different cwvs
-Egs_AD = np.arange(0.062, 0.2, 0.002)
-datsets = [{'cwv':10, 'Tc':296.724, 'colour':'deeppink'},
-           {'cwv':24, 'Tc':304.868, 'colour':'steelblue'},
-           {'cwv':54, 'Tc':303.512, 'colour':'seagreen'}]
-for ds in datsets:
-    cwv = ds['cwv']
-    atm_data = atmospheric_dataset(cwv=cwv)
-    Ephs = atm_data.photon_energies
-    emitter_planck = planck_law_body(T=ds['Tc'], Ephs=Ephs)
-    comparison_lst += [{'label': f'cwv{cwv}', 'color': ds['colour'],
-                        'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
-                         'cutoff angle':90, 'use diffusivity approx':True, 'Egs':Egs_AD}]
-
-
-# comparing blackbody environments
-Ephs = np.arange(1e-6, 0.31, 0.0001)
-Egs_bb = np.arange(0,0.2,0.002)
-emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
-Tsets = [{'Tc':3, 'colour':'orangered'}, {'Tc':200, 'colour':'orange'}]
-for Ts in Tsets:
-    Tc = Ts['Tc']
-    bb_env = planck_law_body(Tc, Ephs)
-    comparison_lst += [{'label': f'{Tc}K', 'color': Ts['colour'],
-                        'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
-                        'cutoff angle': 90, 'use diffusivity approx': True, 'Egs':Egs_bb}]
+# Egs_AD = np.arange(0.062, 0.2, 0.002)
+# datsets = [{'cwv':10, 'Tc':296.724, 'colour':'deeppink'},
+#            {'cwv':24, 'Tc':304.868, 'colour':'steelblue'},
+#            {'cwv':54, 'Tc':303.512, 'colour':'seagreen'}]
+# for ds in datsets:
+#     cwv = ds['cwv']
+#     atm_data = atmospheric_dataset(cwv=cwv)
+#     Ephs = atm_data.photon_energies
+#     emitter_planck = planck_law_body(T=ds['Tc'], Ephs=Ephs)
+#     comparison_lst += [{'label': f'cwv{cwv}', 'color': ds['colour'],
+#                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
+#                          'cutoff angle':90, 'use diffusivity approx':True, 'Egs':Egs_AD}]
+#
+#
+# # comparing blackbody environments
+# Ephs = np.arange(1e-6, 0.31, 0.0001)
+# Egs_bb = np.arange(0,0.2,0.002)
+# emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
+# Tsets = [{'Tc':3, 'colour':'orangered'}, {'Tc':200, 'colour':'orange'}]
+# for Ts in Tsets:
+#     Tc = Ts['Tc']
+#     bb_env = planck_law_body(Tc, Ephs)
+#     comparison_lst += [{'label': f'{Tc}K', 'color': Ts['colour'],
+#                         'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
+#                         'cutoff angle': 90, 'use diffusivity approx': True, 'Egs':Egs_bb}]
 
 
 include_photflux_plots = True
@@ -89,7 +91,7 @@ for sample_dct in comparison_lst:
             except:
                 spectral_photon_flux = atm_data.spectral_photon_flux(Ephs, mu=0, cutoff_angle=cutoff_angle)
         else:
-            spectral_photon_flux = atm_data.spectral_data_with_cutoffangle(angle_array, cutoff_angle)
+            spectral_photon_flux = atm_data.spectral_PDF_with_cutoffangle(angle_array, cutoff_angle)
         axs_pf[1][0].plot(Ephs, spectral_photon_flux, label=sample_dct['label'], color=sample_dct['color'])
 
         Ndot_in = np.vectorize(atm_data.retrieve_Ndot_heaviside)(Egs, cutoff_angle)
@@ -125,13 +127,13 @@ for sample_dct in comparison_lst:
 
 if include_photflux_plots:
     # add reference line
-    for ri in [0,1]:
-        for ci in [0,1]:
-            ylim_max = axs_pf[ri][ci].get_ylim()[1]
-            E_ref = 0.16
-            axs_pf[ri][ci].plot(2*[E_ref],[0,1.1*ylim_max], '--k')
-            axs_pf[ri][ci].text(x=E_ref+0.001, y=ylim_max/2, s=f'{E_ref} eV')
-            axs_pf[ri][ci].set_ylim([0,ylim_max])
+    # for ri in [0,1]:
+    #     for ci in [0,1]:
+    #         ylim_max = axs_pf[ri][ci].get_ylim()[1]
+    #         E_ref = 0.16
+    #         axs_pf[ri][ci].plot(2*[E_ref],[0,1.1*ylim_max], '--k')
+    #         axs_pf[ri][ci].text(x=E_ref+0.001, y=ylim_max/2, s=f'{E_ref} eV')
+    #         axs_pf[ri][ci].set_ylim([0,ylim_max])
 
     # add heaviside demo
     Eg = 0.08  # [eV]
