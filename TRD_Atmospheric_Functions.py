@@ -5,7 +5,7 @@ import xarray as xr
 import pygmo as pg
 from solcore.constants import kb, c, h, q
 from scipy.optimize import minimize_scalar
-from scipy import interpolate
+from scipy import interpolate, integrate
 
 
 def convert_from(array_in, units_in, units_out, corresponding_xs=None):
@@ -148,19 +148,21 @@ class atmospheric_dataset:
         dat_2D = np.array(dat_2D)  # in units [yvals.sr-1.xvals-1]
         return self.interpolate_by_angle(dat_2D, angle_array)
 
-    def interpolated_cosDSPDF(self, angle_array):
-        dat_2D = []
-        for col_head in ['downwelling_0', 'downwelling_53', 'downwelling_70']:
-            dat_2D += [self.retrieve_spectral_array('s-1.m-2', 'eV', col_head)]
-        dat_2D = np.array(dat_2D)  # in units [s-1.m-2.sr-1/eV]
+    def interpolate_cosDSPDF(self, angle_array):
+        '''
+        :param angle_array:
+        :return: L_ph*cos(theta), calculated by interpolating (and extrapolating, where needed) L_2D at the angles requested
+        '''
 
         dat_2D_interpolated = []
 
         angles_rad = np.radians(angle_array)
         angles_known_rad = np.radians([0,53,70])
+        L_2D = self.Lph_2D  # 2D array of L_ph vals, containing directional spectral photon flux [s-1.m-2.sr-1/eV] at 0, 53, 70 degrees
 
         for theta in angles_rad:
-            # check which pair to use:
+            # check which pair of angles to use
+            # usually (theta1 < theta < theta2) for interpolation. theta2 < theta for extrapolation.
             if theta < angles_known_rad[1]:
                 it1, it2 = 0, 1
             else:
@@ -170,10 +172,10 @@ class atmospheric_dataset:
             angle_multiplier = (1-np.cos(theta)/np.cos(theta1)) / (1/np.cos(theta2)-1/np.cos(theta1))
 
             L_costheta_int = []
-            for xi in range(len(dat_2D[0])):
+            for xi in range(len(L_2D[0])):
                 # for each wavelength / photon energy
-                L_t1 = dat_2D[it1][xi]
-                L_t2 = dat_2D[it2][xi]
+                L_t1 = L_2D[it1][xi]
+                L_t2 = L_2D[it2][xi]
 
                 L_costheta = (L_t2-L_t1)*angle_multiplier + L_t1*np.cos(theta)
                 L_costheta_int += [L_costheta]
@@ -192,7 +194,15 @@ class atmospheric_dataset:
         if hasattr(self, 'interpolated_cosDSPDF') and hasattr(self, 'angle_array') and np.array_equal(self.angle_array, angle_array):
             return self.interpolated_cosDSPDF
         else:
-            self.interpolated_cosDSPDF = self.interpolated_cosDSPDF(angle_array)
+            # populate Lph_2D
+            dat_2D = []
+            for col_head in ['downwelling_0', 'downwelling_53', 'downwelling_70']:
+                dat_2D += [self.retrieve_spectral_array('s-1.m-2', 'eV', col_head)]
+            dat_2D = np.array(dat_2D)  # in units [s-1.m-2.sr-1/eV]
+            self.Lph_2D = dat_2D
+
+            # interpolate across zenith angle and store results
+            self.interpolated_cosDSPDF = self.interpolate_cosDSPDF(angle_array)
             self.angle_array = angle_array
             return self.interpolated_cosDSPDF
 
@@ -202,23 +212,24 @@ class atmospheric_dataset:
         :param cutoff_angle: zenith angle between 0 and 90, in degrees. Angles smaller than or equal to the cutoff will be 100% "absorbed".
         :return: 1D array, spectral photon density flux [s-1.m-2/eV]
         '''
-
-        # DSPDF * cos(theta) is computed altogether such to avoid ill-defined DSPDF at theta near 90..
-        photflux_int_2D_timescos = self.retrieve_interpolated_cosDSPDF(angle_array)
-        hvs = np.heaviside(cutoff_angle - angle_array, 1)  # using heaviside to select "accepted" angles (*1), or "rejected" (*0)
-
-        # integrate over zenith angles
-        sin_zenith = np.sin(np.radians(angle_array))  # zenith angle -> theta
+        # zenith angle theta, azimuth angle phi
         # d(Omega) = sin(theta) * d(theta) * d(phi), element solid angle
         # cos(theta) factor for Lambertian emitter
         # Spectral_PDF = \int_0^cutoff Directional_Spectral_PDF cos(theta) d(Omega)
         # Spectral_PDF = \int_0^2pi d(phi) \int_0^theta_cutoff Directional_Spectral_PDF cos(theta) sin(theta) d(theta)
         # Spectral_PDF = 2pi \int_0^90 heaviside * Directional_Spectral_PDF cos(theta) sin(theta) d(theta)
 
+        # Sampled array method
+        # DSPDF * cos(theta) is computed altogether such to avoid ill-defined DSPDF at theta near 90..
+        photflux_int_2D_timescos = self.retrieve_interpolated_cosDSPDF(angle_array)
+        hvs = np.heaviside(cutoff_angle - angle_array, 1)  # using heaviside to select "accepted" angles (*1), or "rejected" (*0)
+        sin_zenith = np.sin(np.radians(angle_array))  # zenith angle -> theta
         rad_hv_sinz = np.transpose(np.transpose(photflux_int_2D_timescos) * hvs * sin_zenith)  # [s-1.m-2.sr-1/eV]*[rad]
-        spectral_photon_flux = 2 * np.pi * np.trapz(rad_hv_sinz, np.radians(angle_array), axis=0)   # [s-1.m-2.rad-1/eV]*[rad]
+        integral_over_theta = np.trapz(rad_hv_sinz, np.radians(angle_array), axis=0)
 
+        spectral_photon_flux = 2 * np.pi *  integral_over_theta  # [s-1.m-2.rad-1/eV]*[rad]
         return spectral_photon_flux  # [s-1.m-2/eV]
+
 
     def retrieve_Ndot_heaviside(self, Eg, cutoff_angle):
         if cutoff_angle == None:
@@ -226,12 +237,15 @@ class atmospheric_dataset:
             spec_phot_flux = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
         else:
             # if cutoff angle is given, perform integral over interpolated angles
-            angle_array = np.linspace(0,90,100)
+            angle_array = np.arange(0,91,1)
             spec_phot_flux = self.spectral_PDF_with_cutoffangle(angle_array, cutoff_angle)
 
         Ephs = self.photon_energies
         spec_pf_heavisided = spec_phot_flux * np.heaviside(Ephs-Eg, 0.5)
-        return np.trapz(spec_pf_heavisided, Ephs)
+        int_over_Eph = np.trapz(spec_pf_heavisided, Ephs)
+
+
+        return int_over_Eph
 
 
 
