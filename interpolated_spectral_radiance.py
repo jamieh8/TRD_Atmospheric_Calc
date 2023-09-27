@@ -53,18 +53,18 @@ def interpolation_method(x_predict, x_known, y_known, Eph):
 
 
 
-atm_data = atmospheric_dataset(cwv=10)
+atm_data = atmospheric_dataset(cwv=24)
 
 Ephs = atm_data.photon_energies
 wls = atm_data.wavelengths
 
-angle_array = np.arange(0,90,1)
+angle_array = np.arange(0,80,1)
 
 
 # make heatmap
 include_slices = True
 include_interpolation = True
-plot_Lcos = True
+plot_Lcos = False
 
 ncols = 1
 if include_slices:
@@ -76,17 +76,17 @@ if include_interpolation:
 fig, axs = plt.subplots(1,ncols, layout='tight')
 
 
-# dat_str = r'Spectral Radiance, L$_e$ [$\mathrm{W.m^{-2}.sr^{-1}/um}$]'
-# xl_str = 'Wavelength [um]'
-# xs = wls
-# yvals = 'W.m-2'
-# xvals = 'um'
+dat_str = r'Spectral Radiance, L$_e$ [$\mathrm{W.m^{-2}.sr^{-1}/um}$]'
+xl_str = 'Wavelength [um]'
+xs = wls
+yvals = 'W.m-2'
+xvals = 'um'
 
-dat_str = r'Directional, Spectral PDF [$\mathrm{s^{-1}.m^{-2}.sr^{-1}/eV}$]'
-xl_str = 'Photon Energy, E$_\mathrm{ph}$ [eV]'
-xs = Ephs
-yvals = 's-1.m-2'
-xvals = 'eV'
+# dat_str = r'Directional, Spectral PDF [$\mathrm{s^{-1}.m^{-2}.sr^{-1}/eV}$]'
+# xl_str = 'Photon Energy, E$_\mathrm{ph}$ [eV]'
+# xs = Ephs
+# yvals = 's-1.m-2'
+# xvals = 'eV'
 
 
 dat_2D = []
@@ -95,7 +95,7 @@ for col_head in ['downwelling_0', 'downwelling_53', 'downwelling_70']:
 dat_2D = np.array(dat_2D)  # in units [yvals.sr-1.xvals-1]
 
 if plot_Lcos:
-    dat_2D_int = atm_data.interpolated_cosDSPDF(angle_array)
+    dat_2D_int = atm_data.interpolate_cosDSPDF(angle_array)
 else:
     dat_2D_int = atm_data.interpolate_by_angle(dat_2D, angle_array)
 

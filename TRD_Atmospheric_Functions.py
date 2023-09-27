@@ -339,7 +339,11 @@ class optimize_powerdensity:
 
     def get_bounds(self):
         # bounds for each argument, for reference
-        bound_ref = {'Eg':{'min':0.062, 'max':0.15},
+        if isinstance(self.trd_in_env.atm, atmospheric_dataset):
+            Eg_min = 0.062  # limit min Eg to smallest photon energy in data
+        else:
+            Eg_min = 1e-4
+        bound_ref = {'Eg':{'min':Eg_min, 'max':0.15},
                      'mu_frac':{'min':-1, 'max':0},
                      'cutoff_angle':{'min':10, 'max':90},
                      'eta_ext':{'min':0.001, 'max':1}}

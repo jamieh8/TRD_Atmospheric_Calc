@@ -11,61 +11,69 @@ def sx_to_Ephs(x):
 comparison_lst = []
 
 # comparing different cutoff angles
-# cwv, T = 10, 296.724
-# cwv, T = 24, 304.868
-cwv, T = 54, 303.512
-atm_data = atmospheric_dataset(cwv=cwv)
-Ephs = atm_data.photon_energies
-emitter_planck = planck_law_body(T=T, Ephs=Ephs)
-angle_array = np.linspace(0,90,100)
-Egs_AD = np.arange(0.062, 0.2, 0.002)
-
-cmap = plt.get_cmap('tab10')
-cutoff_angles = np.arange(10,95,20)
-for ai, cutoff_angle in enumerate(cutoff_angles):
-    line_format_dct = {'color':cmap(ai), 'linestyle':'solid'}
-    comparison_lst += [{'label':f'cwv{cwv}, cutoff {cutoff_angle}', 'color':cmap(ai), 'line_format_dct':line_format_dct,
-                        'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
-                        'cutoff angle':cutoff_angle, 'Egs':Egs_AD, 'use diffusivity approx':False}]
-
-line_format_diff = {'color':'black', 'linestyle':'dashed', 'dashes':(4,4)}
-comparison_lst += [{'label': f'cwv{cwv}, diffusivity approx 53$^\circ \\times \pi$', 'line_format_dct':line_format_diff,
-                    'atmospheric dataset': atm_data, 'emitter body': emitter_planck,
-                    'cutoff angle': None, 'Egs': Egs_AD, 'use diffusivity approx': True}]
+# # cwv, T = 10, 296.724
+# # cwv, T = 24, 304.868
+# cwv, T = 54, 303.512
+# atm_data = atmospheric_dataset(cwv=cwv)
+# Ephs = atm_data.photon_energies
+# emitter_planck = planck_law_body(T=T, Ephs=Ephs)
+angle_array = np.arange(0,91,1)
+# Egs_AD = np.arange(0.062, 0.2, 0.002)
+#
+# cmap = plt.get_cmap('tab10')
+# cutoff_angles = np.arange(10,95,20)
+# for ai, cutoff_angle in enumerate(cutoff_angles):
+#     line_format_dct = {'color':cmap(ai), 'linestyle':'solid'}
+#     comparison_lst += [{'label':f'cwv{cwv}, cutoff {cutoff_angle}', 'color':cmap(ai), 'line_format_dct':line_format_dct,
+#                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
+#                         'cutoff angle':cutoff_angle, 'Egs':Egs_AD, 'use diffusivity approx':False}]
+#
+# line_format_diff = {'color':'black', 'linestyle':'dashed', 'dashes':(4,4)}
+# comparison_lst += [{'label': f'cwv{cwv}, diffusivity approx 53$^\circ \\times \pi$', 'line_format_dct':line_format_diff,
+#                     'atmospheric dataset': atm_data, 'emitter body': emitter_planck,
+#                     'cutoff angle': None, 'Egs': Egs_AD, 'use diffusivity approx': True}]
 
 
 # comparing different cwvs
-# Egs_AD = np.arange(0.062, 0.2, 0.002)
-# datsets = [{'cwv':10, 'Tc':296.724, 'colour':'deeppink'},
-#            {'cwv':24, 'Tc':304.868, 'colour':'steelblue'},
-#            {'cwv':54, 'Tc':303.512, 'colour':'seagreen'}]
-# for ds in datsets:
-#     cwv = ds['cwv']
-#     atm_data = atmospheric_dataset(cwv=cwv)
-#     Ephs = atm_data.photon_energies
-#     emitter_planck = planck_law_body(T=ds['Tc'], Ephs=Ephs)
-#     comparison_lst += [{'label': f'cwv{cwv}', 'color': ds['colour'],
-#                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
-#                          'cutoff angle':90, 'use diffusivity approx':True, 'Egs':Egs_AD}]
-#
-#
-# # comparing blackbody environments
-# Ephs = np.arange(1e-6, 0.31, 0.0001)
-# Egs_bb = np.arange(0,0.2,0.002)
-# emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
-# Tsets = [{'Tc':3, 'colour':'orangered'}, {'Tc':200, 'colour':'orange'}]
-# for Ts in Tsets:
-#     Tc = Ts['Tc']
-#     bb_env = planck_law_body(Tc, Ephs)
-#     comparison_lst += [{'label': f'{Tc}K', 'color': Ts['colour'],
-#                         'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
-#                         'cutoff angle': 90, 'use diffusivity approx': True, 'Egs':Egs_bb}]
+Egs_AD = np.arange(0.062, 0.2, 0.002)
+datsets = [{'cwv':10, 'Tc':296.724, 'colour':'deeppink'},
+           {'cwv':24, 'Tc':304.868, 'colour':'steelblue'},
+           {'cwv':54, 'Tc':303.512, 'colour':'seagreen'}]
+for ds in datsets:
+    cwv = ds['cwv']
+    atm_data = atmospheric_dataset(cwv=cwv)
+    Ephs = atm_data.photon_energies
+    line_format_dct = {'color': ds['colour'], 'linestyle': 'solid'}
+    emitter_planck = planck_law_body(T=ds['Tc'], Ephs=Ephs)
+    comparison_lst += [{'label': f'cwv{cwv}', 'line format':line_format_dct,
+                        'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
+                         'cutoff angle':None, 'use diffusivity approx':True, 'Egs':Egs_AD}]
 
 
-include_photflux_plots = True
+# comparing blackbody environments
+Ephs = np.arange(1e-6, 0.31, 0.0001)
+Egs_bb = np.arange(0.001,0.2,0.002)
+emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
+Tsets = [{'Tc':3, 'colour':'black'}, {'Tc':200, 'colour':'navy'},
+         {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
+for Ts in Tsets:
+    Tc = Ts['Tc']
+    bb_env = planck_law_body(Tc, Ephs)
+    line_format_dct = {'color': Ts['colour'], 'linestyle': 'solid'}
+    comparison_lst += [{'label': f'{Tc}K', 'line format':line_format_dct,
+                        'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
+                        'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
+
+
+include_photflux_plots = False
 include_Ndot_diff = False
-include_muopt_plots = False
+include_muopt_plots = True
+opt_Eg_and_mu = True
+log_power = True
 include_heaviside_ex = False
+
+alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
+alg_de = pg.de(gen=50, ftol=1e-5)
 
 if include_photflux_plots:
     fig_pf, axs_pf = plt.subplots(2,2, layout='tight')
@@ -80,7 +88,7 @@ for sample_dct in comparison_lst:
     emitter = sample_dct['emitter body']
     cutoff_angle = sample_dct['cutoff angle']
     Egs = sample_dct['Egs']
-    style_args = sample_dct['line_format_dct']
+    style_args = sample_dct['line format']
     try:
         linestyle = sample_dct['linestyle']
     except:
@@ -132,8 +140,23 @@ for sample_dct in comparison_lst:
             mu_opt = combined_obj.optimize_mu(Eg, cutoff_angle)
             maxPs += [mu_opt['max power']]
             Vmpps += [mu_opt['Vmpp']]
+
+        if log_power:
+            maxPs = (-1)*np.array(maxPs)
+
         axs_Popt[0].plot(Egs, maxPs, **style_args, label=sample_dct['label'])
         axs_Popt[1].plot(Egs, Vmpps, **style_args)
+
+        if opt_Eg_and_mu:
+            # optimize over Eg and mu simulaneously
+            opt_xs, opt_pd = get_best_pd(combined_obj, args_to_opt=['Eg','mu'],
+                                         args_to_fix={'cutoff_angle':None, 'consider_nonrad':False, 'eta_ext':1}, alg=alg_de)
+            if log_power:
+                pd = opt_pd[0]*(-1)
+            else:
+                pd = opt_pd[0]
+
+            axs_Popt[0].plot(opt_xs['Eg'], pd, 'o', **style_args)
 
 
 
@@ -155,15 +178,15 @@ if include_photflux_plots:
     axs_pf[1][0].legend()
 
     for spec_ax in [axs_pf[0][0], axs_pf[1][0]]:
-        spec_ax.set_ylabel('Spectral P.F.D., F$_{ph}$ [s$^{-1}$.m$^{-2}$/eV]')
-        spec_ax.set_xlabel('Photon Energy, E$_{ph}$ [eV]')
+        spec_ax.set_ylabel('Spectral PFD, F$_mathrm{ph}$ [s$^{-1}$.m$^{-2}$/eV]')
+        spec_ax.set_xlabel('Photon Energy, E$_mathrm{ph}$ [eV]')
         secax = spec_ax.secondary_xaxis('top', functions=(Eph_to_sx, sx_to_Ephs))
         secax.set_xlabel('Wavenumber [cm$^{-1}$]')
         secax.tick_params(axis='x', length=7)
 
     for Ndot_ax in [axs_pf[0][1], axs_pf[1][1]]:
         Ndot_ax.set_ylabel('Photon Flux Density, $\mathrm{\dot{N} \;[s^{-1}.m^{-2}]}$')
-        Ndot_ax.set_xlabel('Bandgap, E$_g$ [eV]')
+        Ndot_ax.set_xlabel('Bandgap, E$_\mathrm{g}$ [eV]')
         secax = Ndot_ax.secondary_xaxis('top', functions=(Eph_to_sx, sx_to_Ephs))
         secax.set_xlabel('Wavenumber [cm$^{-1}$]')
 
@@ -171,12 +194,14 @@ if include_photflux_plots:
     axs_pf[1][1].set_title('Photons absorbed from environment')
 
 if include_muopt_plots:
-    axs_Popt[0].set_xlabel('Bandgap, E$_g$ [eV]')
+    if log_power:
+        axs_Popt[0].set_yscale('log')
+    axs_Popt[0].set_xlabel('Bandgap, E$_\mathrm{g}$ [eV]')
     axs_Popt[0].set_ylabel('Max Power Density [W.m$^{-2}$]')
     axs_Popt[0].legend()
 
-    axs_Popt[1].set_xlabel('Bandgap, E$_g$ [eV]')
-    axs_Popt[1].set_ylabel('V$_{mpp}$ [V]')
+    axs_Popt[1].set_xlabel('Bandgap, E$_\mathrm{g}$ [eV]')
+    axs_Popt[1].set_ylabel('V$_\mathrm{mpp}$ [V]')
 
     for ax in axs_Popt:
         secax = ax.secondary_xaxis('top', functions=(Eph_to_sx, sx_to_Ephs))
