@@ -11,9 +11,9 @@ def sx_to_Ephs(x):
 comparison_lst = []
 
 # comparing different cutoff angles
-cwv, T = 10, 296.724
+# cwv, T = 10, 296.724
 # cwv, T = 24, 304.868
-# cwv, T = 54, 303.512
+cwv, T = 54, 303.512
 atm_data = atmospheric_dataset(cwv=cwv)
 Ephs = atm_data.photon_energies
 emitter_planck = planck_law_body(T=T, Ephs=Ephs)
@@ -23,9 +23,15 @@ Egs_AD = np.arange(0.062, 0.2, 0.002)
 cmap = plt.get_cmap('tab10')
 cutoff_angles = np.arange(10,95,20)
 for ai, cutoff_angle in enumerate(cutoff_angles):
-    comparison_lst += [{'label':f'cwv{cwv}, cutoff {cutoff_angle}', 'color':cmap(ai),
+    line_format_dct = {'color':cmap(ai), 'linestyle':'solid'}
+    comparison_lst += [{'label':f'cwv{cwv}, cutoff {cutoff_angle}', 'color':cmap(ai), 'line_format_dct':line_format_dct,
                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
                         'cutoff angle':cutoff_angle, 'Egs':Egs_AD, 'use diffusivity approx':False}]
+
+line_format_diff = {'color':'black', 'linestyle':'dashed', 'dashes':(4,4)}
+comparison_lst += [{'label': f'cwv{cwv}, diffusivity approx 53$^\circ \\times \pi$', 'line_format_dct':line_format_diff,
+                    'atmospheric dataset': atm_data, 'emitter body': emitter_planck,
+                    'cutoff angle': None, 'Egs': Egs_AD, 'use diffusivity approx': True}]
 
 
 # comparing different cwvs
@@ -74,15 +80,21 @@ for sample_dct in comparison_lst:
     emitter = sample_dct['emitter body']
     cutoff_angle = sample_dct['cutoff angle']
     Egs = sample_dct['Egs']
+    style_args = sample_dct['line_format_dct']
+    try:
+        linestyle = sample_dct['linestyle']
+    except:
+        linestyle = '-'
+
 
     if include_photflux_plots:
         # outgoing photon flux
         Ephs = emitter.Ephs
         spec_phot_flux_out = emitter.spectral_photon_flux(Ephs, mu=0, cutoff_angle=cutoff_angle)
-        axs_pf[0][0].plot(Ephs, spec_phot_flux_out, label=sample_dct['label'], color=sample_dct['color'])
+        axs_pf[0][0].plot(Ephs, spec_phot_flux_out, label=sample_dct['label'], **style_args)
 
         Ndot_out = np.vectorize(emitter.retrieve_Ndot_heaviside)(Egs, cutoff_angle, 0)
-        axs_pf[0][1].plot(Egs, Ndot_out, color=sample_dct['color'])
+        axs_pf[0][1].plot(Egs, Ndot_out, **style_args)
 
         # incoming photon flux
         if sample_dct['use diffusivity approx']:
@@ -92,23 +104,23 @@ for sample_dct in comparison_lst:
                 spectral_photon_flux = atm_data.spectral_photon_flux(Ephs, mu=0, cutoff_angle=cutoff_angle)
         else:
             spectral_photon_flux = atm_data.spectral_PDF_with_cutoffangle(angle_array, cutoff_angle)
-        axs_pf[1][0].plot(Ephs, spectral_photon_flux, label=sample_dct['label'], color=sample_dct['color'])
+        axs_pf[1][0].plot(Ephs, spectral_photon_flux, label=sample_dct['label'], **style_args)
 
         Ndot_in = np.vectorize(atm_data.retrieve_Ndot_heaviside)(Egs, cutoff_angle)
-        axs_pf[1][1].plot(Egs, Ndot_in, label=sample_dct['label'], color=sample_dct['color'])
+        axs_pf[1][1].plot(Egs, Ndot_in, label=sample_dct['label'], **style_args)
 
         if include_Ndot_diff:
-            axs_Ndotd.plot(Egs, Ndot_out-Ndot_in, label=sample_dct['label'], color=sample_dct['color'])
+            axs_Ndotd.plot(Egs, Ndot_out-Ndot_in, label=sample_dct['label'], **style_args)
 
         if include_heaviside_ex:
             Eg_ex = 0.08
             # shade area under spectral PDF that would be integrated
-            axs_pf[0][0].fill_between(Ephs, spec_phot_flux_out*np.heaviside(Ephs-Eg_ex,1), color=sample_dct['color'], alpha=0.2)
-            axs_pf[1][0].fill_between(Ephs, spectral_photon_flux*np.heaviside(Ephs-Eg_ex,1), color=sample_dct['color'], alpha=0.2)
+            axs_pf[0][0].fill_between(Ephs, spec_phot_flux_out*np.heaviside(Ephs-Eg_ex,1), **style_args, alpha=0.2)
+            axs_pf[1][0].fill_between(Ephs, spectral_photon_flux*np.heaviside(Ephs-Eg_ex,1), **style_args, alpha=0.2)
 
             # plot point in Ndot curve corresponding to integral
-            axs_pf[0][1].plot([Eg_ex], [emitter.retrieve_Ndot_heaviside(Eg_ex, 0, 90)], 'o', color=sample_dct['color'],alpha=0.2)
-            axs_pf[1][1].plot([Eg_ex], [atm_data.retrieve_Ndot_heaviside(Eg_ex,90)], 'o',color=sample_dct['color'], alpha=0.2)
+            axs_pf[0][1].plot([Eg_ex], [emitter.retrieve_Ndot_heaviside(Eg_ex, 0, 90)], 'o', **style_args,alpha=0.2)
+            axs_pf[1][1].plot([Eg_ex], [atm_data.retrieve_Ndot_heaviside(Eg_ex,90)], 'o',**style_args, alpha=0.2)
 
 
     if include_muopt_plots:
@@ -120,8 +132,8 @@ for sample_dct in comparison_lst:
             mu_opt = combined_obj.optimize_mu(Eg, cutoff_angle)
             maxPs += [mu_opt['max power']]
             Vmpps += [mu_opt['Vmpp']]
-        axs_Popt[0].plot(Egs, maxPs, color=sample_dct['color'], label=sample_dct['label'])
-        axs_Popt[1].plot(Egs, Vmpps, color=sample_dct['color'])
+        axs_Popt[0].plot(Egs, maxPs, **style_args, label=sample_dct['label'])
+        axs_Popt[1].plot(Egs, Vmpps, **style_args)
 
 
 

@@ -150,7 +150,7 @@ class atmospheric_dataset:
 
     def interpolate_cosDSPDF(self, angle_array):
         '''
-        :param angle_array:
+        :param angle_array: Angle at which to interpolate Lph*costheta
         :return: L_ph*cos(theta), calculated by interpolating (and extrapolating, where needed) L_2D at the angles requested
         '''
 
@@ -192,6 +192,7 @@ class atmospheric_dataset:
         '''
 
         if hasattr(self, 'interpolated_cosDSPDF') and hasattr(self, 'angle_array') and np.array_equal(self.angle_array, angle_array):
+            # if interpolated array already exists, and corresponds to angle_array requested, return existing data
             return self.interpolated_cosDSPDF
         else:
             # populate Lph_2D
@@ -219,12 +220,13 @@ class atmospheric_dataset:
         # Spectral_PDF = \int_0^2pi d(phi) \int_0^theta_cutoff Directional_Spectral_PDF cos(theta) sin(theta) d(theta)
         # Spectral_PDF = 2pi \int_0^90 heaviside * Directional_Spectral_PDF cos(theta) sin(theta) d(theta)
 
-        # Sampled array method
+        # Using pre-existing sampled array
         # DSPDF * cos(theta) is computed altogether such to avoid ill-defined DSPDF at theta near 90..
-        photflux_int_2D_timescos = self.retrieve_interpolated_cosDSPDF(angle_array)
+        DSPDF_cos = self.retrieve_interpolated_cosDSPDF(angle_array)
         hvs = np.heaviside(cutoff_angle - angle_array, 1)  # using heaviside to select "accepted" angles (*1), or "rejected" (*0)
         sin_zenith = np.sin(np.radians(angle_array))  # zenith angle -> theta
-        rad_hv_sinz = np.transpose(np.transpose(photflux_int_2D_timescos) * hvs * sin_zenith)  # [s-1.m-2.sr-1/eV]*[rad]
+        rad_hv_sinz = np.transpose(np.transpose(DSPDF_cos) * hvs * sin_zenith)  # [s-1.m-2.sr-1/eV]*[rad]
+
         integral_over_theta = np.trapz(rad_hv_sinz, np.radians(angle_array), axis=0)
 
         spectral_photon_flux = 2 * np.pi *  integral_over_theta  # [s-1.m-2.rad-1/eV]*[rad]
@@ -233,17 +235,16 @@ class atmospheric_dataset:
 
     def retrieve_Ndot_heaviside(self, Eg, cutoff_angle):
         if cutoff_angle == None:
-            # if cutoff_angle None, use the diffusivity approximation
+            # if cutoff_angle is None, use the diffusivity approximation
             spec_phot_flux = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
         else:
             # if cutoff angle is given, perform integral over interpolated angles
-            angle_array = np.arange(0,91,1)
+            angle_array = np.arange(0,90.5,0.5)
             spec_phot_flux = self.spectral_PDF_with_cutoffangle(angle_array, cutoff_angle)
 
         Ephs = self.photon_energies
         spec_pf_heavisided = spec_phot_flux * np.heaviside(Ephs-Eg, 0.5)
         int_over_Eph = np.trapz(spec_pf_heavisided, Ephs)
-
 
         return int_over_Eph
 
@@ -260,6 +261,8 @@ class planck_law_body:
         return (2 / (c**2 * (h/q)**3)) * Eph**2 / (np.exp((Eph - mu) / self.kT_eV) - 1)
 
     def spectral_photon_flux(self, Eph, mu=0, cutoff_angle = 90):
+        if cutoff_angle == None:
+            cutoff_angle = 90
         # [s-1.m-2.eV-1] = [s-1.m-2.sr-1.eV-1]*[sr] -- must integrate over solid angle
         # d(Omega) = sin(theta) * d(theta) * d(phi), element solid angle for int
         # angle_spectral_photon_flux is independent of theta, can be taken out.
@@ -349,27 +352,39 @@ class optimize_powerdensity:
 
         return (mins, maxs)
 
+    def get_nix(self):
+        # integer dimension
+        if 'cutoff_angle' in self.args_to_opt:
+            return 1
+        else:
+            return 0
+
 
 def get_best_pd(trd_in_environment, args_to_opt, args_to_fix, alg):
     '''
     :param trd_in_environment: Instance of TRD_in_atmosphere class, with method power_density defined
     :param args_to_opt: List of strings defining which arguments of power_density to optimize. Options are 'Eg', 'mu', 'cutoff_angle'. Order of strings determines order in which optimized x values are returned.
-    :param args_to_fix: Dictionary, with keys being strings specifying the arguments ('Eg', 'mu', 'cutoff_angle') to fix for the optimization. Corresponding values are values to fix.
+    :param args_to_fix: Dictionary, with keys that are strings specifying the arguments ('Eg', 'mu', 'cutoff_angle') to fix for the optimization. Corresponding values are values to fix.
     :param alg: pygmo algorithm to use for optimization
-    :return: best_x (vector, order and contents specified by args_to_opt list), best_pd ("smallest" power density found, W.m-2)
+    :return: best_x (dictionary with keys corresponding to args_to_opt strings, values giving parameters corresponding to best_pd), best_pd ("smallest" power density found, W.m-2)
     '''
 
-    # if mu is to be optimized, replace ID string with 'mu_frac', and ensure it is last
+
     args_to_opt_mod = copy.deepcopy(args_to_opt)
     if 'mu' in args_to_opt_mod:
-        args_to_opt_mod.remove('mu')
-        args_to_opt_mod += ['mu_frac']
+        # if mu is to be optimized, replace ID string with 'mu_frac', and ensure it is last
+        args_to_opt_mod[args_to_opt.index('mu')] = 'mu_frac'
+
+    if 'cutoff_angle' in args_to_opt_mod:
+        # if cutoff_angle is to be optimized, ensure it is at the end of the list (requirement for pygmo integer limit)
+        args_to_opt_mod.remove('cutoff_angle')
+        args_to_opt_mod += ['cutoff_angle']
 
     # define problem with UDP
     prob = pg.problem(optimize_powerdensity(trd_in_environment, args_to_opt_mod, args_to_fix))
 
     # initial population
-    pop = pg.population(prob, size=10)
+    pop = pg.population(prob, size=15)
     algo = pg.algorithm(alg)
     # algo.set_verbosity(1)   # toggle for debugging
 
