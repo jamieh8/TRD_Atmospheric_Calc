@@ -42,7 +42,7 @@ angle_array = np.arange(0,91,1)
 
 
 # comparing different cwvs
-Egs_AD = np.arange(0.062, 0.2, 0.002)
+Egs_AD = np.arange(0.062, 0.3, 0.002)
 datsets = [{'cwv':10, 'Tc':296.724, 'colour':'deeppink'},
            {'cwv':24, 'Tc':304.868, 'colour':'steelblue'},
            {'cwv':54, 'Tc':303.512, 'colour':'seagreen'}]
@@ -59,15 +59,19 @@ for ds in datsets:
 
 # comparing blackbody environments
 Ephs = np.arange(1e-6, 0.31, 0.0001)
-Egs_bb = np.arange(0.001,0.2,0.002)
+Egs_bb = np.arange(0.001,0.3,0.002)
 emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
-Tsets = [{'Tc':3, 'colour':'black'}, {'Tc':200, 'colour':'navy'},
-         {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
+Tsets = [{'Tc':3, 'colour':'black'}]
+        #, {'Tc':200, 'colour':'navy'}, {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
+for dataset_entry in comparison_lst:
+    Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(303)
+    Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
+
 for Ts in Tsets:
     Tc = Ts['Tc']
     bb_env = planck_law_body(Tc, Ephs)
-    line_format_dct = {'color': Ts['colour'], 'linestyle': 'solid'}
-    comparison_lst += [{'label': f'{Tc}K', 'line format':line_format_dct,
+    line_format_dct = {'color': Ts['colour'], 'linestyle': 'dashed'}
+    comparison_lst += [{'label': 'T$_\mathrm{atm}$ = '+f'{Tc:.5g}K', 'line format':line_format_dct,
                         'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
                         'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
 
@@ -79,6 +83,7 @@ include_heaviside_ex = False
 include_muopt_plots = True
 opt_Eg_and_mu = True
 log_power = True
+atmdat_background = True
 
 
 alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
@@ -88,8 +93,19 @@ if include_photflux_plots:
     fig_pf, axs_pf = plt.subplots(2,2, layout='tight')
     if include_Ndot_diff:
         fig_Ndotd, axs_Ndotd = plt.subplots(1,1, layout='tight')
+
 if include_muopt_plots:
     fig_Popt, axs_Popt = plt.subplots(1,2, layout='tight')
+
+    if atmdat_background:
+        ref_dataset = atmospheric_dataset(10)
+        downwelling_photflux = ref_dataset.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV',
+                                                                   col_name='downwelling_flux')
+        dwn_flux_yaxs = axs_Popt[0].twinx()
+        dwn_flux_yaxs.plot(ref_dataset.photon_energies, downwelling_photflux, c='lightgray')
+        dwn_flux_yaxs.set_ylabel('Spectral Photon Flux, $\mathrm{F_{ph} \; [s^{-1}.m^{-2}/eV]}$', color='lightgrey')
+        dwn_flux_yaxs.tick_params(axis='y', labelcolor='lightgrey')
+        dwn_flux_yaxs.text(s='cwv10', x=0.09, y=0.5*1e23, ha='right', color='lightgrey')
 
 
 for sample_dct in comparison_lst:
@@ -141,6 +157,7 @@ for sample_dct in comparison_lst:
 
 
     if include_muopt_plots:
+
         # TRD performance metrics
         combined_obj = TRD_in_atmosphere(emitter, atm_data)
         maxPs = []
@@ -166,6 +183,7 @@ for sample_dct in comparison_lst:
                 pd = opt_pd[0]
 
             axs_Popt[0].plot(opt_xs['Eg'], pd, 'o', **style_args)
+            axs_Popt[0].text(s = sample_dct['label'],x=opt_xs['Eg'], y=pd+0.15*pd, c=style_args['color'],ha='right')
 
 
 
@@ -207,7 +225,7 @@ if include_muopt_plots:
         axs_Popt[0].set_yscale('log')
     axs_Popt[0].set_xlabel('Bandgap, E$_\mathrm{g}$ [eV]')
     axs_Popt[0].set_ylabel('Max Power Density [W.m$^{-2}$]')
-    axs_Popt[0].legend()
+    # axs_Popt[0].legend()
 
     axs_Popt[1].set_xlabel('Bandgap, E$_\mathrm{g}$ [eV]')
     axs_Popt[1].set_ylabel('V$_\mathrm{mpp}$ [V]')
@@ -234,5 +252,9 @@ if include_muopt_plots:
         secax2.xaxis.set_minor_locator(FixedLocator(mtick_mod))
         ax.minorticks_on()
         secax.minorticks_on()
+
+    axs_Popt[0].set_zorder(dwn_flux_yaxs.get_zorder()+1)
+    axs_Popt[0].set_frame_on(False)
+    axs_Popt[0].set_xlim([0.0001,0.3])
 
 plt.show()

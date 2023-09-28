@@ -4,6 +4,7 @@ import copy
 import xarray as xr
 import pygmo as pg
 from solcore.constants import kb, c, h, q
+from scipy.constants import sigma
 from scipy.optimize import minimize_scalar
 from scipy import interpolate, integrate
 
@@ -115,6 +116,22 @@ class atmospheric_dataset:
                                      corresponding_xs=self.wavenumbers)
 
         return new_array
+
+    def effective_skytemp(self, T_fill):
+        downwelling_irrad_diff = self.retrieve_spectral_array(yvals='W.m-2', xvals='eV', col_name='downwelling_flux')
+        Ephs = self.photon_energies
+        downwelling_Wm2 = np.trapz(y=downwelling_irrad_diff, x=Ephs)
+
+        # Ephs in dataset are limited. use blackbody with T_fill to "fill in" lower Ephs
+        Ephs_fill = np.arange(0.0001,Ephs[0],Ephs[1]-Ephs[0])
+        BB_fill = planck_law_body(T=T_fill, Ephs=Ephs_fill)
+        BBfill_irrad = BB_fill.spectral_irradiance(Ephs_fill, mu=0, cutoff_angle=90)
+        downwelling_Wm2 += np.trapz(y=BBfill_irrad, x=Ephs_fill)
+
+        effectiveT = (downwelling_Wm2/sigma)**(0.25)   # ( [W.m-2]/[W.m-2.K-4] ) ^ 1/4 = [K]
+        # sigma : stefan-boltzmann constant
+
+        return effectiveT
 
     def interpolate_by_angle(self, dat_2D, angle_array):
         '''
@@ -264,10 +281,21 @@ class planck_law_body:
         self.Ephs = Ephs
 
     def angle_spectral_photon_flux(self, Eph, mu):
+        '''
+        :param Eph: Eph in eV
+        :param mu: mu in eV
+        :return: spectral, directional photon flux - value, or array of values, in [s-1.m-2.sr-1/eV]
+        '''
         # [s-1.m-2 / sr.eV]
         return (2 / (c**2 * (h/q)**3)) * Eph**2 / (np.exp((Eph - mu) / self.kT_eV) - 1)
 
     def spectral_photon_flux(self, Eph, mu=0, cutoff_angle = 90):
+        '''
+        :param Eph: Photon energy/energies, in [eV]
+        :param mu: Fermi level splitting, in [eV]
+        :param cutoff_angle: Angle between 0 and 90 [degrees], past which no emission occurs.
+        :return: Spectral photon flux - value or array of values in [s-1.m-2/eV]
+        '''
         if cutoff_angle == None:
             cutoff_angle = 90
         # [s-1.m-2.eV-1] = [s-1.m-2.sr-1.eV-1]*[sr] -- must integrate over solid angle
@@ -279,6 +307,15 @@ class planck_law_body:
         # with \int_0^theta_cutoff cos(theta) sin(theta) d(theta) = [sin^2(theta)/2]_0^theta_cutoff = sin^2(theta_cutoff)/2
         int_sinz_cosz = np.sin(np.radians(cutoff_angle))**2 / 2
         return 2*np.pi * self.angle_spectral_photon_flux(Eph, mu) * int_sinz_cosz
+
+    def spectral_irradiance(self, Eph, mu=0, cutoff_angle=90):
+        '''
+        :param Eph:
+        :param mu:
+        :param cutoff_angle:
+        :return: value or array of values in [W.m-2/eV]
+        '''
+        return self.spectral_photon_flux(Eph, mu, cutoff_angle) * q * Eph  # [s-1.m-2/eV]*[J/eV]*[eV]
 
     def retrieve_Ndot_heaviside(self, Eg, cutoff_angle=90, mu=0):
         '''
