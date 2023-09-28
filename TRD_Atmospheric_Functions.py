@@ -23,6 +23,13 @@ def convert_from(array_in, units_in, units_out, corresponding_xs=None):
         if units_out == 'wavenumber [cm-1]':
             return array_in * q / (h*c*1e2)
 
+        elif units_out == 'wavelength [um]':
+            return 1e6 * (h/q) * c / array_in
+
+    if units_in =='wavelength [um]':
+        if units_out == 'photon energy [eV]':
+            return 1e6 * (h/q) * c / array_in
+
     elif units_in == 'per wavenumber [/cm-1]':
 
         if units_out =='per wavelength [/um]':

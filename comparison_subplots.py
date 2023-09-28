@@ -1,11 +1,18 @@
 import matplotlib.pyplot as plt
 from TRD_Atmospheric_Functions import *
+from matplotlib.ticker import AutoMinorLocator, FixedLocator
 
-def Eph_to_sx(x):
+def Eph_to_v(x):
     return convert_from(x, units_in = 'photon energy [eV]', units_out = 'wavenumber [cm-1]')
 
-def sx_to_Ephs(x):
+def v_to_Ephs(x):
     return convert_from(x, units_in='wavenumber [cm-1]', units_out='photon energy [eV]')
+
+def Eph_to_wl(x):
+    return convert_from(x, units_in = 'photon energy [eV]', units_out = 'wavelength [um]')
+
+def wl_to_Ephs(x):
+    return convert_from(x, units_in='wavelength [um]', units_out='photon energy [eV]')
 
 
 comparison_lst = []
@@ -67,10 +74,12 @@ for Ts in Tsets:
 
 include_photflux_plots = False
 include_Ndot_diff = False
+include_heaviside_ex = False
+
 include_muopt_plots = True
 opt_Eg_and_mu = True
 log_power = True
-include_heaviside_ex = False
+
 
 alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
 alg_de = pg.de(gen=50, ftol=1e-5)
@@ -180,15 +189,15 @@ if include_photflux_plots:
     for spec_ax in [axs_pf[0][0], axs_pf[1][0]]:
         spec_ax.set_ylabel('Spectral PFD, F$_mathrm{ph}$ [s$^{-1}$.m$^{-2}$/eV]')
         spec_ax.set_xlabel('Photon Energy, E$_mathrm{ph}$ [eV]')
-        secax = spec_ax.secondary_xaxis('top', functions=(Eph_to_sx, sx_to_Ephs))
+        secax = spec_ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
         secax.set_xlabel('Wavenumber [cm$^{-1}$]')
         secax.tick_params(axis='x', length=7)
 
     for Ndot_ax in [axs_pf[0][1], axs_pf[1][1]]:
         Ndot_ax.set_ylabel('Photon Flux Density, $\mathrm{\dot{N} \;[s^{-1}.m^{-2}]}$')
         Ndot_ax.set_xlabel('Bandgap, E$_\mathrm{g}$ [eV]')
-        secax = Ndot_ax.secondary_xaxis('top', functions=(Eph_to_sx, sx_to_Ephs))
-        secax.set_xlabel('Wavenumber [cm$^{-1}$]')
+        secax = Ndot_ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
+        secax.set_xlabel('Wavenumber, $\\tilde{v}$ [cm$^{-1}$]')
 
     axs_pf[0][1].set_title('Photons emitted by TRD')
     axs_pf[1][1].set_title('Photons absorbed from environment')
@@ -204,7 +213,26 @@ if include_muopt_plots:
     axs_Popt[1].set_ylabel('V$_\mathrm{mpp}$ [V]')
 
     for ax in axs_Popt:
-        secax = ax.secondary_xaxis('top', functions=(Eph_to_sx, sx_to_Ephs))
-        secax.set_xlabel('Wavenumber [cm$^{-1}$]')
+        secax = ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
+        secax.set_xlabel('Wavenumber, $\\tilde{v}$ [cm$^{-1}$]')
+
+        secax2 = ax.secondary_xaxis(1.15, functions=(Eph_to_wl, wl_to_Ephs))
+        secax2.set_xlabel('Wavelength, $\\lambda$ [um]')
+        wl_lbls = [200,60,30,20,15,10,9,8,7,6]
+        secax2.set_xticks(wl_lbls)
+        wl_minor_ticks = np.array([])
+        for i in range(len(wl_lbls)-1):
+            diff = wl_lbls[i] - wl_lbls[i+1]
+            if diff > 10:
+                mtick_spacing = 10
+            else:
+                mtick_spacing = 1
+            new_ticks = np.arange(wl_lbls[i], wl_lbls[i+1], -mtick_spacing)[1:]
+            wl_minor_ticks = np.append(wl_minor_ticks, new_ticks)
+
+        mtick_mod = list(np.flip(wl_minor_ticks))
+        secax2.xaxis.set_minor_locator(FixedLocator(mtick_mod))
+        ax.minorticks_on()
+        secax.minorticks_on()
 
 plt.show()
