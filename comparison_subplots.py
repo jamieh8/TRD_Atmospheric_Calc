@@ -50,7 +50,7 @@ for ds in datsets:
     cwv = ds['cwv']
     atm_data = atmospheric_dataset(cwv=cwv)
     Ephs = atm_data.photon_energies
-    line_format_dct = {'color': ds['colour'], 'linestyle': 'solid'}
+    line_format_dct = {'color': ds['colour'], 'linestyle': 'solid', 'alpha':0.75}
     emitter_planck = planck_law_body(T=ds['Tc'], Ephs=Ephs)
     comparison_lst += [{'label': f'cwv{cwv}', 'line format':line_format_dct,
                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
@@ -58,29 +58,29 @@ for ds in datsets:
 
 
 # comparing blackbody environments
-Ephs = np.arange(1e-6, 0.31, 0.0001)
-Egs_bb = np.arange(0.001,0.3,0.002)
-emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
-Tsets = [{'Tc':3, 'colour':'black'}]
-        #, {'Tc':200, 'colour':'navy'}, {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
-for dataset_entry in comparison_lst:
-    Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(303)
-    Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
+# Ephs = np.arange(1e-6, 0.31, 0.0001)
+# Egs_bb = np.arange(0.001,0.3,0.002)
+# emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
+# Tsets = [{'Tc':3, 'colour':'black'}]
+#         #, {'Tc':200, 'colour':'navy'}, {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
+# for dataset_entry in comparison_lst:
+#     Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(303)
+#     Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
+#
+# for Ts in Tsets:
+#     Tc = Ts['Tc']
+#     bb_env = planck_law_body(Tc, Ephs)
+#     line_format_dct = {'color': Ts['colour'], 'linestyle': 'dashed'}
+#     comparison_lst += [{'label': 'T$_\mathrm{atm}$ = '+f'{Tc:.5g}K', 'line format':line_format_dct,
+#                         'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
+#                         'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
 
-for Ts in Tsets:
-    Tc = Ts['Tc']
-    bb_env = planck_law_body(Tc, Ephs)
-    line_format_dct = {'color': Ts['colour'], 'linestyle': 'dashed'}
-    comparison_lst += [{'label': 'T$_\mathrm{atm}$ = '+f'{Tc:.5g}K', 'line format':line_format_dct,
-                        'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
-                        'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
 
-
-include_photflux_plots = False
+include_photflux_plots = True
 include_Ndot_diff = False
 include_heaviside_ex = False
 
-include_muopt_plots = True
+include_muopt_plots = False
 opt_Eg_and_mu = True
 log_power = True
 atmdat_background = True
@@ -205,8 +205,8 @@ if include_photflux_plots:
     axs_pf[1][0].legend()
 
     for spec_ax in [axs_pf[0][0], axs_pf[1][0]]:
-        spec_ax.set_ylabel('Spectral PFD, F$_mathrm{ph}$ [s$^{-1}$.m$^{-2}$/eV]')
-        spec_ax.set_xlabel('Photon Energy, E$_mathrm{ph}$ [eV]')
+        spec_ax.set_ylabel('SPFD, F$_\mathrm{ph}$ [s$^{-1}$.m$^{-2}$/eV]')
+        spec_ax.set_xlabel('Photon Energy, E$_\mathrm{ph}$ [eV]')
         secax = spec_ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
         secax.set_xlabel('Wavenumber [cm$^{-1}$]')
         secax.tick_params(axis='x', length=7)
