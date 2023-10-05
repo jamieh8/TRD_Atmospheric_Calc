@@ -34,32 +34,48 @@ alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
 
 
 
-fig_scatter, axs_scatter = plt.subplots(1,1,layout='tight')
+fig_scatter, axs = plt.subplots(1,2,layout='tight', sharey='all', width_ratios=[1,2])
 Eg = 0.1
-for eta, symbol in zip([1e-1, 1e-2], ['o','s']):
+ax_scatter = axs[0]
+style_arg_lst = [{'marker':'o'}, {'marker':'o', 'mfc':'none', 'mew':2}]
+for eta, style_args in zip([1e-2, 1e-1], style_arg_lst):
     for case in comparison_lst:
         opt_xs, opt_pd = get_best_pd(case['TRD in atm'],
                                      args_to_opt=args_to_opt,
                                      args_to_fix={'cutoff_angle':None, 'eta_ext':eta, 'Eg':Eg, 'consider_nonrad':True},
                                      alg=alg_powell)
-        axs_scatter.plot(case['cwv'], opt_pd[0]*(-1), symbol, c=case['colour'])
+        style_args.update({'c':case['colour']})
+        ax_scatter.plot(case['cwv'], opt_pd[0]*(-1), **style_args)
 
-axs_scatter.set_yscale('log')
-axs_scatter.set_xlabel('cwv')
-axs_scatter.set_ylabel('Power Density [W.m$^{-2}$]')
-axs_scatter.minorticks_on()
+ax_scatter.set_yscale('log')
+ax_scatter.set_xlabel('Humidity / cwv [kg.m$^{-2}$]')
+ax_scatter.set_ylabel('Power Density [W.m$^{-2}$]')
+ax_scatter.minorticks_on()
 
-reflines = [{'y':1e6/24, 'string':'daily average solar'}, {'y':51, 'string':'300K to 3K limit'}]
+reflines = [{'y':1e3/24, 'string':'daily average solar', 'line args':{'linestyle':'--', 'color':'orangered'}, 'text args':{'color':'orangered', 'va':'top'}},
+            {'y':51, 'string':'300K to 3K limit', 'line args':{'linestyle':'--', 'color':'black'}, 'text args':{'color':'black', 'va':'bottom'}}]
 for rl in reflines:
-    axs_scatter.plot([0,60],2*[rl['y']], '-k', lw=1)
-    axs_scatter.text(s=rl['string'],x=25, y=rl['y'], ha='center', va='bottom')
+    ax_scatter.plot([0,60],2*[rl['y']], **rl['line args'], lw=1)
+    ax_scatter.text(s=rl['string'],x=25, y=rl['y'], ha='center', **rl['text args'])
 
+sample_area = 8  # [m-2]
+power_magnitudes_guides = [{'label':'Average single person household in Australia for 1 day', 'PD':8*1e3 / (sample_area*24)},
+                           {'label':'800W microwave for 15 mins', 'PD':800*0.25 / (sample_area*24)},
+                           {'label':'10W LED bulb for 5h', 'PD':10*5 / (sample_area*24)},
+                           {'label':'5W phone charger for 2h', 'PD':10 / (sample_area*24)},
+                           {'label':'60W fridge for 24h', 'PD':60*24 / (sample_area*24)},]
+ax_powerguide = axs[1]
+for pguide in power_magnitudes_guides:
+    ax_powerguide.annotate(pguide['label'], xy=(0,pguide['PD']), xytext=(0.1, pguide['PD']), arrowprops=dict(arrowstyle="->"), va='center')
+    # ax_powerguide.text(s=pguide['label'], x=0.05, y=pguide['PD'], ha='left', va='bottom')
+ax_powerguide.set_title(f'Over 24h, {sample_area} m$^2$ can power:')
+ax_powerguide.axis('off')
 
-axs_scatter.set_xlim([0,55])
-sec_yaxs = axs_scatter.secondary_yaxis('right', functions=(lambda x: x*24/1e3, lambda x: x/24 * 1e3))
+ax_scatter.set_xlim([0,55])
+sec_yaxs = ax_scatter.secondary_yaxis('right', functions=(lambda x: x*24, lambda x: x/24))
 
 sec_yaxs.set_ylabel('Energy Density over 24h [Wh.m$^{-2}$]')
-axs_scatter.set_title('$\eta_\mathrm{ext}$=10$^{-2}$, $E_\mathrm{g}=0.1$ eV')
+# axs_scatter.set_title('$\eta_\mathrm{ext}$=10$^{-2}$, $E_\mathrm{g}=0.1$ eV')
 
 # ------------------------ Sweep eta_ext ------------------------
 # Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
