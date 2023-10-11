@@ -14,6 +14,27 @@ def Eph_to_wl(x):
 def wl_to_Ephs(x):
     return convert_from(x, units_in='wavelength [um]', units_out='photon energy [eV]')
 
+def add_wl_ticks(ax):
+    secax = ax.secondary_xaxis('top', functions=(Eph_to_wl, wl_to_Ephs))
+    secax.set_xlabel('Wavelength, $\\lambda$ [um]')
+    wl_lbls = [200, 60, 30, 20, 15, 10, 9, 8, 7, 6,5,4,3,2,1]
+    secax.set_xticks(wl_lbls)
+    wl_minor_ticks = np.array([])
+    for i in range(len(wl_lbls) - 1):
+        diff = wl_lbls[i] - wl_lbls[i + 1]
+        if diff > 10:
+            mtick_spacing = 10
+        else:
+            mtick_spacing = 1
+        new_ticks = np.arange(wl_lbls[i], wl_lbls[i + 1], -mtick_spacing)[1:]
+        wl_minor_ticks = np.append(wl_minor_ticks, new_ticks)
+
+    mtick_mod = list(np.flip(wl_minor_ticks))
+    secax.xaxis.set_minor_locator(FixedLocator(mtick_mod))
+    ax.minorticks_on()
+    # secax.minorticks_on()
+
+
 
 comparison_lst = []
 
@@ -50,7 +71,7 @@ for ds in datsets:
     cwv = ds['cwv']
     atm_data = atmospheric_dataset(cwv=cwv)
     Ephs = atm_data.photon_energies
-    line_format_dct = {'color': ds['colour'], 'linestyle': 'solid', 'alpha':0.75}
+    line_format_dct = {'color': ds['colour'], 'linestyle': 'solid'}
     emitter_planck = planck_law_body(T=ds['Tc'], Ephs=Ephs)
     comparison_lst += [{'label': f'cwv{cwv}', 'line format':line_format_dct,
                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
@@ -58,32 +79,33 @@ for ds in datsets:
 
 
 # comparing blackbody environments
-# Ephs = np.arange(1e-6, 0.31, 0.0001)
-# Egs_bb = np.arange(0.001,0.3,0.002)
-# emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
-# Tsets = [{'Tc':3, 'colour':'black'}]
+Ephs = np.arange(1e-6, 0.31, 0.0001)
+Egs_bb = np.arange(0.001,0.3,0.002)
+emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
+Tsets = [{'Tc':3, 'colour':'black'}]
 #         #, {'Tc':200, 'colour':'navy'}, {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
-# for dataset_entry in comparison_lst:
-#     Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(303)
-#     Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
-#
-# for Ts in Tsets:
-#     Tc = Ts['Tc']
-#     bb_env = planck_law_body(Tc, Ephs)
-#     line_format_dct = {'color': Ts['colour'], 'linestyle': 'dashed'}
-#     comparison_lst += [{'label': 'T$_\mathrm{atm}$ = '+f'{Tc:.5g}K', 'line format':line_format_dct,
-#                         'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
-#                         'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
+for dataset_entry in comparison_lst:
+    Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(303)
+    Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
+
+for Ts in Tsets:
+    Tc = Ts['Tc']
+    bb_env = planck_law_body(Tc, Ephs)
+    line_format_dct = {'color': Ts['colour'], 'linestyle': 'dashed'}
+    comparison_lst += [{'label': 'T$_\mathrm{atm}$ = '+f'{Tc:.5g}K', 'line format':line_format_dct,
+                        'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
+                        'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
 
 
-include_photflux_plots = True
+include_photflux_plots = False
 include_Ndot_diff = False
 include_heaviside_ex = False
 
-include_muopt_plots = False
-opt_Eg_and_mu = True
+include_muopt_plots = True
+opt_Eg_and_mu = True  # adds points at optimal Eg
 log_power = True
-atmdat_background = True
+atmdat_background = False
+
 
 
 alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
@@ -152,7 +174,7 @@ for sample_dct in comparison_lst:
             axs_pf[1][0].fill_between(Ephs, spectral_photon_flux*np.heaviside(Ephs-Eg_ex,1), **style_args, alpha=0.2)
 
             # plot point in Ndot curve corresponding to integral
-            axs_pf[0][1].plot([Eg_ex], [emitter.retrieve_Ndot_heaviside(Eg_ex, 0, 90)], 'o', **style_args,alpha=0.2)
+            axs_pf[0][1].plot([Eg_ex], [emitter.retrieve_Ndot_heaviside(Eg=Eg_ex, cutoff_angle=90, mu=0)], 'o', **style_args,alpha=0.2)
             axs_pf[1][1].plot([Eg_ex], [atm_data.retrieve_Ndot_heaviside(Eg_ex,90)], 'o',**style_args, alpha=0.2)
 
 
@@ -167,8 +189,8 @@ for sample_dct in comparison_lst:
             maxPs += [mu_opt['max power']]
             Vmpps += [mu_opt['Vmpp']]
 
-        if log_power:
-            maxPs = (-1)*np.array(maxPs)
+        # if log_power:
+        maxPs = (-1)*np.array(maxPs)
 
         axs_Popt[0].plot(Egs, maxPs, **style_args, label=sample_dct['label'])
         axs_Popt[1].plot(Egs, Vmpps, **style_args)
@@ -177,13 +199,15 @@ for sample_dct in comparison_lst:
             # optimize over Eg and mu simulaneously
             opt_xs, opt_pd = get_best_pd(combined_obj, args_to_opt=['Eg','mu'],
                                          args_to_fix={'cutoff_angle':None, 'consider_nonrad':False, 'eta_ext':1}, alg=alg_de)
+
+            pd = opt_pd[0] * (-1)
             if log_power:
-                pd = opt_pd[0]*(-1)
+                y_offset = 0.15*pd
             else:
-                pd = opt_pd[0]
+                y_offset = 0.1
 
             axs_Popt[0].plot(opt_xs['Eg'], pd, 'o', **style_args)
-            axs_Popt[0].text(s = sample_dct['label'],x=opt_xs['Eg'], y=pd+0.15*pd, c=style_args['color'],ha='right')
+            axs_Popt[0].text(s = sample_dct['label'],x=opt_xs['Eg'], y=pd+y_offset, c=style_args['color'],ha='right')
 
 
 
@@ -207,15 +231,24 @@ if include_photflux_plots:
     for spec_ax in [axs_pf[0][0], axs_pf[1][0]]:
         spec_ax.set_ylabel('SPFD, F$_\mathrm{ph}$ [s$^{-1}$.m$^{-2}$/eV]')
         spec_ax.set_xlabel('Photon Energy, E$_\mathrm{ph}$ [eV]')
-        secax = spec_ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
-        secax.set_xlabel('Wavenumber [cm$^{-1}$]')
-        secax.tick_params(axis='x', length=7)
+
+        # secax = spec_ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
+        # secax.set_xlabel('Wavenumber [cm$^{-1}$]')
+        # secax.tick_params(axis='x', length=7)
 
     for Ndot_ax in [axs_pf[0][1], axs_pf[1][1]]:
         Ndot_ax.set_ylabel('Photon Flux Density, $\mathrm{\dot{N} \;[s^{-1}.m^{-2}]}$')
         Ndot_ax.set_xlabel('Bandgap, E$_\mathrm{g}$ [eV]')
-        secax = Ndot_ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
-        secax.set_xlabel('Wavenumber, $\\tilde{v}$ [cm$^{-1}$]')
+
+        # secax = Ndot_ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
+        # secax.set_xlabel('Wavenumber, $\\tilde{v}$ [cm$^{-1}$]')
+
+    for pf_ax in axs_pf.flatten():
+        pf_ax.minorticks_on()
+        pf_ax.yaxis.set_tick_params(which='minor', bottom=False)  # turn off minor ticks for y axis
+        add_wl_ticks(pf_ax)
+        og_ylim = pf_ax.get_ylim()
+        pf_ax.set_ylim([0,og_ylim[1]])
 
     axs_pf[0][1].set_title('Photons emitted by TRD')
     axs_pf[1][1].set_title('Photons absorbed from environment')
@@ -231,30 +264,32 @@ if include_muopt_plots:
     axs_Popt[1].set_ylabel('V$_\mathrm{mpp}$ [V]')
 
     for ax in axs_Popt:
-        secax = ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
-        secax.set_xlabel('Wavenumber, $\\tilde{v}$ [cm$^{-1}$]')
+        # secax = ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
+        # secax.set_xlabel('Wavenumber, $\\tilde{v}$ [cm$^{-1}$]')
 
-        secax2 = ax.secondary_xaxis(1.15, functions=(Eph_to_wl, wl_to_Ephs))
-        secax2.set_xlabel('Wavelength, $\\lambda$ [um]')
-        wl_lbls = [200,60,30,20,15,10,9,8,7,6]
-        secax2.set_xticks(wl_lbls)
-        wl_minor_ticks = np.array([])
-        for i in range(len(wl_lbls)-1):
-            diff = wl_lbls[i] - wl_lbls[i+1]
-            if diff > 10:
-                mtick_spacing = 10
-            else:
-                mtick_spacing = 1
-            new_ticks = np.arange(wl_lbls[i], wl_lbls[i+1], -mtick_spacing)[1:]
-            wl_minor_ticks = np.append(wl_minor_ticks, new_ticks)
+        add_wl_ticks(ax)
+        # secax2 = ax.secondary_xaxis(1.15, functions=(Eph_to_wl, wl_to_Ephs))
+        # secax2.set_xlabel('Wavelength, $\\lambda$ [um]')
+        # wl_lbls = [200,60,30,20,15,10,9,8,7,6]
+        # secax2.set_xticks(wl_lbls)
+        # wl_minor_ticks = np.array([])
+        # for i in range(len(wl_lbls)-1):
+        #     diff = wl_lbls[i] - wl_lbls[i+1]
+        #     if diff > 10:
+        #         mtick_spacing = 10
+        #     else:
+        #         mtick_spacing = 1
+        #     new_ticks = np.arange(wl_lbls[i], wl_lbls[i+1], -mtick_spacing)[1:]
+        #     wl_minor_ticks = np.append(wl_minor_ticks, new_ticks)
+        #
+        # mtick_mod = list(np.flip(wl_minor_ticks))
+        # secax2.xaxis.set_minor_locator(FixedLocator(mtick_mod))
+        # ax.minorticks_on()
+        # secax.minorticks_on()
 
-        mtick_mod = list(np.flip(wl_minor_ticks))
-        secax2.xaxis.set_minor_locator(FixedLocator(mtick_mod))
-        ax.minorticks_on()
-        secax.minorticks_on()
-
-    axs_Popt[0].set_zorder(dwn_flux_yaxs.get_zorder()+1)
-    axs_Popt[0].set_frame_on(False)
-    axs_Popt[0].set_xlim([0.0001,0.3])
+    if atmdat_background:
+        axs_Popt[0].set_zorder(dwn_flux_yaxs.get_zorder()+1)
+        axs_Popt[0].set_frame_on(False)
+    # axs_Popt[0].set_xlim([0.0001,0.3])
 
 plt.show()

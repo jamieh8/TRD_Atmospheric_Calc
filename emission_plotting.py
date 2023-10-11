@@ -31,20 +31,21 @@ mus = [-0.075, -0.05, -0.025, 0]
 ax = axs
 mu_spec = -0.025
 cmap = matplotlib.colormaps['plasma']
+emitter = planck_law_body(T=300, Ephs = Ephs)
 for mi, mu in enumerate(mus):
-    spec_pflux_planck = planck_dist(Ephs, mu, kT_c_eV)  # [m-2.s-2/eV]
+    spec_pflux_planck = emitter.spectral_photon_flux(Ephs, mu, cutoff_angle=90) #[s-1.m-2/eV]
 
     mu_colour = cmap(0.2 + 0.8 * mi / len(mus))
     ax.plot(Ephs, spec_pflux_planck, label=f'$\mu$ = {mu}', color=mu_colour)
 
     if mu == mu_spec:
-        spec_pflux_plankheaviside = spec_pflux_planckheaviside(Ephs, Eg_single, mu_spec, kT_c_eV)  # [m-2.s-2/eV]
+        # spec_pflux_plankheaviside = emitter.retrieve_Ndot_heaviside(Eg=Eg_single, cutoff_angle=90, mu=mu_spec) #[s-1.m-2]
         # ax_area.plot(Ephs, spec_pflux_plankheaviside, label=f'Planck dist $\\times$ Heaviside, $E_g$={Eg_single}eV', color=mu_spec_colour)
-        ax.fill_between(Ephs, spec_pflux_plankheaviside, color=mu_colour, alpha=0.2)
+        ax.fill_between(Ephs, spec_pflux_planck * np.heaviside(Ephs-Eg_single, 0.5), color=mu_colour, alpha=0.2)
 
 
-ax.set_ylabel('(Spectral) Photon Density Flux [$\mathrm{m^{-2}.s^{-1}.eV^{-1}}$]')
-ax.set_xlabel('Photon Energy, E$_{ph}$ [eV]')
+ax.set_ylabel('SPFD, F$_\mathrm{ph}$ [$\mathrm{s^{-1}.m^{-2}.eV^{-1}}$]')
+ax.set_xlabel('Photon Energy, E$_\mathrm{ph}$ [eV]')
 ax.set_title(f'Planck\'s law, T={Tc}K - Photons emitted by converter')
 ax.legend()
 

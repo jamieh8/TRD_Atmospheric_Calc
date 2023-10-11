@@ -6,7 +6,7 @@ cwv = 10  # column water vapor in mm, have data for 10, 24 and 54 mm
 atm_dat = atmospheric_dataset(cwv)
 
 label_to_colour = {'downwelling_0':'navy', 'downwelling_53':'lightseagreen', 'downwelling_70':'slateblue',
-                   'downwelling_flux':'crimson', 'upwelling_flux':'darkmagenta', 'net_flux':'goldenrod'}
+                   'downwelling_flux':'deeppink', 'upwelling_flux':'darkmagenta', 'net_flux':'goldenrod'}
 
 rad_units_cm = '$\mathrm{W.cm^{-2}.sr^{-1}}$'
 irrad_units_cm = '$\mathrm{W.cm^{-2}}$'
@@ -19,18 +19,18 @@ plot_units = [
 
     {'x_ret':'um', 'y_ret':'W.m-2', 'x_label':'Wavelength, $\lambda$ [um]', 'x_array':atm_dat.wavelengths,
      'y_label_sr':f'Spectral Radiance, L$_e$ [{rad_units_m}/um]',
-     'y_label_nosr':f'Spectral Irradiance, E$_e$ [{irrad_units_m}/um]'},
+     'y_label_nosr':f'Spectral Irradiance, F$_e$ [{irrad_units_m}/um]'},
 
     {'x_ret':'eV', 'y_ret':'W.m-2', 'x_label':'Photon Energy, E$_{ph}$ [eV]', 'y_label':'Spectral Radiance', 'x_array':atm_dat.photon_energies,
      'y_label_sr':f'Spectral Radiance, L$_e$ [{rad_units_m}/eV]',
-     'y_label_nosr':f'Spectral Irradiance, E$_e$ [{irrad_units_m}/eV]'}
+     'y_label_nosr':f'Spectral Irradiance, F$_e$ [{irrad_units_m}/eV]'}
 ]
 
 
 fig, axs = plt.subplots(2,len(plot_units), layout='tight')
 
 radiance_labels = ['downwelling_0', 'downwelling_53', 'downwelling_70']
-flux_labels = ['downwelling_flux', 'upwelling_flux', 'net_flux']
+flux_labels = ['downwelling_flux']#, 'upwelling_flux', 'net_flux']
 
 for ci, unit_set in enumerate(plot_units):
     for ri,labels in enumerate([radiance_labels, flux_labels]):
