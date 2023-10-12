@@ -55,7 +55,8 @@ ax_scatter.minorticks_on()
 reflines = [{'y':1e3/24, 'string':'daily average solar', 'line args':{'linestyle':'--', 'color':'orangered'}, 'text args':{'color':'orangered', 'va':'top'}},
             {'y':51, 'string':'300K to 3K limit', 'line args':{'linestyle':'--', 'color':'black'}, 'text args':{'color':'black', 'va':'bottom'}}]
 for rl in reflines:
-    ax_scatter.plot([0,60],2*[rl['y']], **rl['line args'], lw=1)
+    ax_scatter.annotate(text='', xy=(55,rl['y']), xytext=(0,rl['y']), arrowprops=dict(arrowstyle='->'))
+    ax_scatter.plot([0,60],2*[rl['y']], color='white', lw=1)
     ax_scatter.text(s=rl['string'],x=25, y=rl['y'], ha='center', **rl['text args'])
 
 sample_area = 8  # [m-2]
