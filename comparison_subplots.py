@@ -61,21 +61,39 @@ angle_array = np.arange(0,91,1)
 #                     'atmospheric dataset': atm_data, 'emitter body': emitter_planck,
 #                     'cutoff angle': None, 'Egs': Egs_AD, 'use diffusivity approx': True}]
 
-
-# comparing different cwvs
-Egs_AD = np.arange(0.062, 0.3, 0.002)
-datsets = [{'cwv':10, 'Tc':296.724, 'colour':'deeppink'},
-           {'cwv':24, 'Tc':304.868, 'colour':'steelblue'},
-           {'cwv':54, 'Tc':303.512, 'colour':'seagreen'}]
+# comparing to new datasets:
+Egs_AD = np.arange(0.02, 0.3, 0.002)
+datsets = [{'cwv':'low', 'Tc':292.039, 'colour':'darkorange'},
+           {'cwv':'mid', 'Tc':305.928, 'colour':'darkviolet'},
+           {'cwv':'high', 'Tc':298.15, 'colour':'teal'}
+           ]
 for ds in datsets:
     cwv = ds['cwv']
-    atm_data = atmospheric_dataset(cwv=cwv)
+    atm_data = atmospheric_dataset_new(cwv=cwv)
     Ephs = atm_data.photon_energies
     line_format_dct = {'color': ds['colour'], 'linestyle': 'solid'}
     emitter_planck = planck_law_body(T=ds['Tc'], Ephs=Ephs)
-    comparison_lst += [{'label': f'cwv{cwv}', 'line format':line_format_dct,
+    comparison_lst += [{'label': f'{cwv} tcwv', 'line format':line_format_dct,
                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
                          'cutoff angle':None, 'use diffusivity approx':True, 'Egs':Egs_AD}]
+
+
+# comparing different cwvs
+# Egs_AD = np.arange(0.062, 0.3, 0.002)
+# datsets = [{'cwv':10, 'Tc':296.724, 'colour':'deeppink'},
+#            # {'cwv':24, 'Tc':304.868, 'colour':'steelblue'},
+#            # {'cwv':54, 'Tc':303.512, 'colour':'seagreen'}
+#            ]
+# for ds in datsets:
+#     cwv = ds['cwv']
+#     atm_data = atmospheric_dataset(cwv=cwv)
+#     Ephs = atm_data.photon_energies
+#     line_format_dct = {'color': ds['colour'], 'linestyle': 'solid'}
+#     emitter_planck = planck_law_body(T=ds['Tc'], Ephs=Ephs)
+#     comparison_lst += [{'label': f'cwv{cwv}', 'line format':line_format_dct,
+#                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
+#                          'cutoff angle':None, 'use diffusivity approx':True, 'Egs':Egs_AD}]
+
 
 
 # comparing blackbody environments
@@ -85,7 +103,7 @@ emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
 Tsets = [{'Tc':3, 'colour':'black'}]
 #         #, {'Tc':200, 'colour':'navy'}, {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
 for dataset_entry in comparison_lst:
-    Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(303)
+    Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(300)
     Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
 
 for Ts in Tsets:
@@ -104,8 +122,9 @@ include_heaviside_ex = False
 include_muopt_plots = True
 opt_Eg_and_mu = True  # adds points at optimal Eg
 log_power = True
-atmdat_background = False
+atmdat_background = True
 
+secondary_ticks = 'wavenumber'  # 'wavelength'
 
 
 alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
@@ -120,14 +139,14 @@ if include_muopt_plots:
     fig_Popt, axs_Popt = plt.subplots(1,2, layout='tight')
 
     if atmdat_background:
-        ref_dataset = atmospheric_dataset(10)
+        ref_dataset = atmospheric_dataset_new('low')
         downwelling_photflux = ref_dataset.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV',
                                                                    col_name='downwelling_flux')
         dwn_flux_yaxs = axs_Popt[0].twinx()
         dwn_flux_yaxs.plot(ref_dataset.photon_energies, downwelling_photflux, c='lightgray')
         dwn_flux_yaxs.set_ylabel('Spectral Photon Flux, $\mathrm{F_{ph} \; [s^{-1}.m^{-2}/eV]}$', color='lightgrey')
         dwn_flux_yaxs.tick_params(axis='y', labelcolor='lightgrey')
-        dwn_flux_yaxs.text(s='cwv10', x=0.09, y=0.5*1e23, ha='right', color='lightgrey')
+        dwn_flux_yaxs.text(s='low tcwv', x=0.09, y=0.5*1e23, ha='right', color='lightgrey')
 
 
 for sample_dct in comparison_lst:
@@ -264,28 +283,14 @@ if include_muopt_plots:
     axs_Popt[1].set_ylabel('V$_\mathrm{mpp}$ [V]')
 
     for ax in axs_Popt:
-        # secax = ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
-        # secax.set_xlabel('Wavenumber, $\\tilde{v}$ [cm$^{-1}$]')
+        if secondary_ticks == 'wavenumber':
+            secax = ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
+            secax.set_xlabel('Wavenumber, $\\tilde{v}$ [cm$^{-1}$]')
+            ax.minorticks_on()
+            secax.minorticks_on()
+        elif secondary_ticks == 'wavelength':
+            add_wl_ticks(ax)
 
-        add_wl_ticks(ax)
-        # secax2 = ax.secondary_xaxis(1.15, functions=(Eph_to_wl, wl_to_Ephs))
-        # secax2.set_xlabel('Wavelength, $\\lambda$ [um]')
-        # wl_lbls = [200,60,30,20,15,10,9,8,7,6]
-        # secax2.set_xticks(wl_lbls)
-        # wl_minor_ticks = np.array([])
-        # for i in range(len(wl_lbls)-1):
-        #     diff = wl_lbls[i] - wl_lbls[i+1]
-        #     if diff > 10:
-        #         mtick_spacing = 10
-        #     else:
-        #         mtick_spacing = 1
-        #     new_ticks = np.arange(wl_lbls[i], wl_lbls[i+1], -mtick_spacing)[1:]
-        #     wl_minor_ticks = np.append(wl_minor_ticks, new_ticks)
-        #
-        # mtick_mod = list(np.flip(wl_minor_ticks))
-        # secax2.xaxis.set_minor_locator(FixedLocator(mtick_mod))
-        # ax.minorticks_on()
-        # secax.minorticks_on()
 
     if atmdat_background:
         axs_Popt[0].set_zorder(dwn_flux_yaxs.get_zorder()+1)

@@ -85,13 +85,13 @@ for case in to_plot:
         arg_f = {arg_sweep_str: xval}
         if arg_fix_extra != None:
             arg_f.update(arg_fix_extra)
-        opt_xs, opt_pd = get_best_pd(combined_trd_env, args_to_opt=args_to_opt, args_to_fix=arg_f, alg = alg_de)
+        opt_xs, opt_pd = get_best_pd(combined_trd_env, args_to_opt=args_to_opt, args_to_fix=arg_f, alg = alg_powell)
         max_pds += [opt_pd[0]]
         opt_vals += [[opt_xs.get(str_lbl) for str_lbl in args_to_opt]]  # ensures order of values in opt_vals matches order of args_to_opt.!
 
         # print(f'optimized xs: {opt_xs}')
         # print(f'fixed: {arg_f}')
-        # print(f'max PD: {opt_pd[0]}')
+        print(f'max PD: {opt_pd[0]}')
 
         # optres_90, pd_90 = get_best_pd(combined_trd_env, args_to_opt=['mu'], args_to_fix={arg_sweep_str: xval, 'cutoff_angle':None}, alg = alg_powell)
         # max_pds_90 += [pd_90[0]]
@@ -126,6 +126,8 @@ for opi, opt_label in enumerate(args_to_opt):
     axs[opi+1].set_ylabel(translate_to_label[opt_label])
     axs[opi+1].set_xlabel(xlabel_str)
 
+axs[0].plot([0,90],[1,1], '--k', lw=1)
+axs[0].set_xlim([10,90])
 
 
 # ----------------- Heatmap ----------------- #
@@ -158,15 +160,15 @@ for opi, opt_label in enumerate(args_to_opt):
 # y_id_str = 'Eg'
 # args_to_opt = ['mu']
 # arg_fix_extra = {'cutoff_angle':None, 'consider_nonrad':True}
-# commercial_diode_ref = True
+# commercial_diode_ref = False
 # norm_str = 'log power'
 #
 # alg = pg.scipy_optimize(method='Powell', tol=1e-5)
 # # alg = pg.de(gen=50, ftol=1e-5)
 #
 #
-# # cwv, Tc = 10, 296.724
-# cwv, Tc = 24, 304.868
+# cwv, Tc = 10, 296.724
+# # cwv, Tc = 24, 304.868
 # # cwv, Tc = 54, 303.512
 # atm_data = atmospheric_dataset(cwv)
 # case_label = f'cwv{cwv}'

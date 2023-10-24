@@ -56,6 +56,7 @@ def Ndot_downwellheaviside(Eg, Ephs, downwell_array):
     return pflux
 
 
+
 class atmospheric_dataset:
     def load_file_as_xarray(self, cwv):
         filename = os.path.join('simulations_telfer', f'telfer_australia_cwv{cwv}.txt')
@@ -69,6 +70,9 @@ class atmospheric_dataset:
         ]
         ds = xr.DataArray(data[:, 1:], coords={'wavenumber': data[:, 0],
                                                'column': column_labels[1:]}, dims=['wavenumber', 'column'])
+
+        self.zenith_angles = [0,53,70]
+
         return ds
 
     def __init__(self, cwv):
@@ -87,7 +91,7 @@ class atmospheric_dataset:
         '''
         :param yvals: Can be 'W.m-2', 's-1.m-2', or 'W.cm-2'. If string is not recognized, 'W.cm-2' is returned.
         :param xvals: Can be 'cm-1', 'eV', 'um'. If string is not recognized, 'cm-1' is returned.
-        :param col_name: Can be 'downwelling_x' (with x = 0, 53, 70), 'downwelling_flux', 'upwelling_flux', 'net_flux'.
+        :param col_name: Can be 'downwelling_x' (with x = zenith_angle), 'downwelling_flux', 'upwelling_flux', 'net_flux'.
         :return: 1D array of spectral data specified by col_name, in units specified by yvals and xvals strings.
         '''
         new_array = self.org_xarray.sel(column=col_name)  # original values, in [W.cm-2.(sr-1)/cm-1]
@@ -109,7 +113,7 @@ class atmospheric_dataset:
             elif xvals == 'um':
                 units_out_str = 'per wavelength [/um]'
             else:
-                print('xvals string not recognized. Returning spectral array in default /eV')
+                print('xvals string not recognized. Returning spectral array in default [/eV]')
                 units_out_str = 'per photon energy [/eV]'
             new_array = convert_from(new_array,
                                      units_in='per wavenumber [/cm-1]', units_out=units_out_str,
@@ -144,7 +148,7 @@ class atmospheric_dataset:
         for xi in range(len(dat_2D[0])):
             # for each wavelength/photon energy, interpolate values for angles specified
             new_x_predict = 1 / np.cos(np.radians(angle_array))
-            new_x_known = 1 / np.cos(np.radians([0,53,70]))
+            new_x_known = 1 / np.cos(np.radians(self.zenith_angles))
             y_known = dat_2D[:, xi]
             scp_int_ext = interpolate.interp1d(new_x_known, y_known, bounds_error=False, fill_value='extrapolate')
             y_predict = scp_int_ext(new_x_predict)
@@ -167,7 +171,8 @@ class atmospheric_dataset:
         '''
         # build 2D array with angles 0, 53, 70
         dat_2D = []
-        for col_head in ['downwelling_0', 'downwelling_53', 'downwelling_70']:
+        col_heads = [f'downwelling_{theta}' for theta in self.zenith_angles]
+        for col_head in col_heads:
             dat_2D += [self.retrieve_spectral_array(yvals, xvals, col_head)]
         dat_2D = np.array(dat_2D)  # in units [yvals.sr-1.xvals-1]
         return self.interpolate_by_angle(dat_2D, angle_array)
@@ -181,16 +186,16 @@ class atmospheric_dataset:
         dat_2D_interpolated = []
 
         angles_rad = np.radians(angle_array)
-        angles_known_rad = np.radians([0,53,70])
+        angles_known_rad = np.radians(self.zenith_angles)
         L_2D = self.Lph_2D  # 2D array of L_ph vals, containing directional spectral photon flux [s-1.m-2.sr-1/eV] at 0, 53, 70 degrees
 
         for theta in angles_rad:
             # check which pair of angles to use
-            # usually (theta1 < theta < theta2) for interpolation. theta2 < theta for extrapolation.
-            if theta < angles_known_rad[1]:
-                it1, it2 = 0, 1
-            else:
-                it1, it2 = 1, 2
+            i_insert = np.searchsorted(angles_known_rad, theta) # return index of insertion to maintain order
+            if i_insert >= len(angles_known_rad):
+                i_insert = len(angles_known_rad)-1
+
+            it1, it2 = i_insert-1, i_insert
             theta1, theta2 = angles_known_rad[it1], angles_known_rad[it2]
 
             angle_multiplier = (1-np.cos(theta)/np.cos(theta1)) / (1/np.cos(theta2)-1/np.cos(theta1))
@@ -221,7 +226,8 @@ class atmospheric_dataset:
         else:
             # populate Lph_2D
             dat_2D = []
-            for col_head in ['downwelling_0', 'downwelling_53', 'downwelling_70']:
+            col_heads = [f'downwelling_{theta}' for theta in self.zenith_angles]
+            for col_head in col_heads:
                 dat_2D += [self.retrieve_spectral_array('s-1.m-2', 'eV', col_head)]
             dat_2D = np.array(dat_2D)  # in units [s-1.m-2.sr-1/eV]
             self.Lph_2D = dat_2D
@@ -272,7 +278,23 @@ class atmospheric_dataset:
 
         return int_over_Eph
 
+class atmospheric_dataset_new(atmospheric_dataset):
+    def load_file_as_xarray(self, cwv):
+        filename = os.path.join('simulations_telfer_24oct', f'telfer_australia_{cwv}.txt')
+        data = np.loadtxt(filename)
 
+        # make an xarray to add headings etc.
+        column_labels = ['wavenumber']  # cm-1, centre point of bin. 0.5 cm-1 steps
+        zenith_angles = [0,10,20,30,40,53,60,65,70,75,80,85]
+        self.zenith_angles = zenith_angles
+
+        radiance_labels = [f'downwelling_{theta}' for theta in zenith_angles] # RADIANCE - units of W cm-2 (cm-1)-1 sr-1
+        column_labels += radiance_labels
+
+        column_labels += ['downwelling_flux']
+        ds = xr.DataArray(data[:, 1:], coords={'wavenumber': data[:, 0],
+                                               'column': column_labels[1:]}, dims=['wavenumber', 'column'])
+        return ds
 
 class planck_law_body:
     def __init__(self, T=300, Ephs=np.arange(1e-6, 0.31, 0.0001)):
