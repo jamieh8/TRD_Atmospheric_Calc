@@ -61,19 +61,32 @@ angle_array = np.arange(0,91,1)
 #                     'atmospheric dataset': atm_data, 'emitter body': emitter_planck,
 #                     'cutoff angle': None, 'Egs': Egs_AD, 'use diffusivity approx': True}]
 
-# comparing to new datasets:
-Egs_AD = np.arange(0.02, 0.3, 0.002)
-datsets = [{'cwv':'low', 'Tc':292.039, 'colour':'darkorange'},
-           {'cwv':'mid', 'Tc':305.928, 'colour':'darkviolet'},
-           {'cwv':'high', 'Tc':298.15, 'colour':'teal'}
-           ]
-for ds in datsets:
-    cwv = ds['cwv']
-    atm_data = atmospheric_dataset_new(cwv=cwv)
+# comparing new datasets:
+Egs_AD = np.arange(0.0125, 0.3, 0.002)
+
+datasets = [
+    # {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
+    {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
+    # {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
+
+    # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
+    # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
+    {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
+    #
+    # {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
+    # {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
+    {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
+    ]
+
+for ds in datasets:
+    cwv_str = ds['cwvstring']
+    loc_str = ds['loc']
+    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
     Ephs = atm_data.photon_energies
-    line_format_dct = {'color': ds['colour'], 'linestyle': 'solid'}
-    emitter_planck = planck_law_body(T=ds['Tc'], Ephs=Ephs)
-    comparison_lst += [{'label': f'{cwv} tcwv', 'line format':line_format_dct,
+    line_format_dct = {'color': ds['color'], 'linestyle': 'solid'}
+    scatter_format = {'c': ds['color'], 'marker': ds['symbol'], 'markersize':8}
+    emitter_planck = planck_law_body(T=ds['Tskin'], Ephs=Ephs)
+    comparison_lst += [{'label': f'{loc_str} {cwv_str}', 'line format':line_format_dct, 'scatter format':scatter_format,
                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
                          'cutoff angle':None, 'use diffusivity approx':True, 'Egs':Egs_AD}]
 
@@ -97,32 +110,35 @@ for ds in datsets:
 
 
 # comparing blackbody environments
-Ephs = np.arange(1e-6, 0.31, 0.0001)
-Egs_bb = np.arange(0.001,0.3,0.002)
-emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
-Tsets = [{'Tc':3, 'colour':'black'}]
-#         #, {'Tc':200, 'colour':'navy'}, {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
-for dataset_entry in comparison_lst:
-    Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(300)
-    Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
+# Ephs = np.arange(1e-6, 0.31, 0.0001)
+# Egs_bb = np.arange(0.001,0.3,0.002)
+# emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
+# Tsets = [{'Tc':3, 'colour':'black'}]
+# #         #, {'Tc':200, 'colour':'navy'}, {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
+# for dataset_entry in comparison_lst:
+#     Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(300)
+#     Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
+#
+# for Ts in Tsets:
+#     Tc = Ts['Tc']
+#     bb_env = planck_law_body(Tc, Ephs)
+#     line_format_dct = {'color': Ts['colour'], 'linestyle': 'dashed'}
+#     comparison_lst += [{'label': 'T$_\mathrm{atm}$ = '+f'{Tc:.5g}K', 'line format':line_format_dct,
+#                         'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
+#                         'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
+#
+# comparison_lst[-1].update({'label position':'below'})  # required for Tatm Telfer high, to accomodate Telfer mid
 
-for Ts in Tsets:
-    Tc = Ts['Tc']
-    bb_env = planck_law_body(Tc, Ephs)
-    line_format_dct = {'color': Ts['colour'], 'linestyle': 'dashed'}
-    comparison_lst += [{'label': 'T$_\mathrm{atm}$ = '+f'{Tc:.5g}K', 'line format':line_format_dct,
-                        'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
-                        'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
-
-
-include_photflux_plots = False
+include_photflux_plots = True
 include_Ndot_diff = False
 include_heaviside_ex = False
 
-include_muopt_plots = True
+include_muopt_plots = False
 opt_Eg_and_mu = True  # adds points at optimal Eg
 log_power = True
 atmdat_background = True
+
+include_Eg_PD_scatter = False
 
 secondary_ticks = 'wavenumber'  # 'wavelength'
 
@@ -146,8 +162,10 @@ if include_muopt_plots:
         dwn_flux_yaxs.plot(ref_dataset.photon_energies, downwelling_photflux, c='lightgray')
         dwn_flux_yaxs.set_ylabel('Spectral Photon Flux, $\mathrm{F_{ph} \; [s^{-1}.m^{-2}/eV]}$', color='lightgrey')
         dwn_flux_yaxs.tick_params(axis='y', labelcolor='lightgrey')
-        dwn_flux_yaxs.text(s='low tcwv', x=0.09, y=0.5*1e23, ha='right', color='lightgrey')
+        dwn_flux_yaxs.text(s='Telfer low', x=0.09, y=0.5*1e23, ha='right', color='lightgrey')
 
+if include_Eg_PD_scatter:
+    fig_scatter, axs_scatter = plt.subplots(1,1, layout='tight')
 
 for sample_dct in comparison_lst:
     atm_data = sample_dct['atmospheric dataset']
@@ -196,11 +214,9 @@ for sample_dct in comparison_lst:
             axs_pf[0][1].plot([Eg_ex], [emitter.retrieve_Ndot_heaviside(Eg=Eg_ex, cutoff_angle=90, mu=0)], 'o', **style_args,alpha=0.2)
             axs_pf[1][1].plot([Eg_ex], [atm_data.retrieve_Ndot_heaviside(Eg_ex,90)], 'o',**style_args, alpha=0.2)
 
-
+    combined_obj = TRD_in_atmosphere(emitter, atm_data)
     if include_muopt_plots:
-
         # TRD performance metrics
-        combined_obj = TRD_in_atmosphere(emitter, atm_data)
         maxPs = []
         Vmpps = []
         for Eg in Egs:
@@ -214,19 +230,29 @@ for sample_dct in comparison_lst:
         axs_Popt[0].plot(Egs, maxPs, **style_args, label=sample_dct['label'])
         axs_Popt[1].plot(Egs, Vmpps, **style_args)
 
-        if opt_Eg_and_mu:
-            # optimize over Eg and mu simulaneously
-            opt_xs, opt_pd = get_best_pd(combined_obj, args_to_opt=['Eg','mu'],
+    if opt_Eg_and_mu and (include_muopt_plots or include_Eg_PD_scatter):
+        # optimize over Eg and mu simulaneously
+        opt_xs, opt_pd = get_best_pd(combined_obj, args_to_opt=['Eg','mu'],
                                          args_to_fix={'cutoff_angle':None, 'consider_nonrad':False, 'eta_ext':1}, alg=alg_de)
 
-            pd = opt_pd[0] * (-1)
-            if log_power:
-                y_offset = 0.15*pd
-            else:
-                y_offset = 0.1
+        pd = opt_pd[0] * (-1)
+        if log_power:
+           y_offset = 0.15*pd
+        else:
+            y_offset = 0.1
 
+        if include_muopt_plots:
             axs_Popt[0].plot(opt_xs['Eg'], pd, 'o', **style_args)
-            axs_Popt[0].text(s = sample_dct['label'],x=opt_xs['Eg'], y=pd+y_offset, c=style_args['color'],ha='right')
+            label_pos = sample_dct.get('label position')
+            if label_pos == 'below':
+                axs_Popt[0].text(s = sample_dct['label'], x=opt_xs['Eg'], y=pd-y_offset, c=style_args['color'], ha='right', va='top')
+            else:
+                axs_Popt[0].text(s=sample_dct['label'], x=opt_xs['Eg'], y=pd + y_offset, c=style_args['color'],
+                                     ha='right', va='bottom')
+
+        if include_Eg_PD_scatter:
+            axs_scatter.plot(opt_xs['Eg'], pd, **sample_dct['scatter format'])
+
 
 
 
@@ -296,5 +322,9 @@ if include_muopt_plots:
         axs_Popt[0].set_zorder(dwn_flux_yaxs.get_zorder()+1)
         axs_Popt[0].set_frame_on(False)
     # axs_Popt[0].set_xlim([0.0001,0.3])
+
+if include_Eg_PD_scatter:
+    axs_scatter.set_xlabel('Optimal Bandgap, E$_g$ [eV]')
+    axs_scatter.set_ylabel('Max Power Density [W.m$^{-2}$]')
 
 plt.show()

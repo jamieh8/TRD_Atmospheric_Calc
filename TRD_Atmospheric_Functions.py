@@ -279,13 +279,21 @@ class atmospheric_dataset:
         return int_over_Eph
 
 class atmospheric_dataset_new(atmospheric_dataset):
+    def __init__(self, cwv, location):
+        self.location = location
+        super().__init__(cwv)
+
     def load_file_as_xarray(self, cwv):
-        filename = os.path.join('simulations_telfer_24oct', f'telfer_australia_{cwv}.txt')
+        filename = os.path.join('simulations_24oct', f'{self.location}_{cwv}.txt')
         data = np.loadtxt(filename)
 
         # make an xarray to add headings etc.
         column_labels = ['wavenumber']  # cm-1, centre point of bin. 0.5 cm-1 steps
-        zenith_angles = [0,10,20,30,40,53,60,65,70,75,80,85]
+        if self.location=='telfer':
+            zenith_angles = [0,10,20,30,40,53,60,65,70,75,80,85]
+        else:
+            zenith_angles = [0,53,70]
+
         self.zenith_angles = zenith_angles
 
         radiance_labels = [f'downwelling_{theta}' for theta in zenith_angles] # RADIANCE - units of W cm-2 (cm-1)-1 sr-1

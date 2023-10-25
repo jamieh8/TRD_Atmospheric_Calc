@@ -48,19 +48,33 @@ to_plot = []
 
 
 # Setup cases to plot
-for AD_dict in [
-    {'cwv':10, 'Tc':296.724, 'col':'deeppink', 'Eg':0.094},
-    {'cwv':24, 'Tc':304.868, 'col':'steelblue', 'Eg':0.094},
-    {'cwv':54, 'Tc':303.512, 'col':'seagreen', 'Eg':0.1}
-]:
+old_file_dicts = [
+    {'cwv':10, 'Tc':296.724, 'col':'deeppink', 'Eg':0.094, 'new':False},
+    {'cwv':24, 'Tc':304.868, 'col':'steelblue', 'Eg':0.094, 'new':False},
+    {'cwv':54, 'Tc':303.512, 'col':'seagreen', 'Eg':0.1, 'new':False}
+]
+new_file_dicts = [
+    {'cwv':'low', 'Tc':301.56, 'col':'darkorange', 'Eg':0.094, 'new':True},
+    {'cwv':'mid', 'Tc':306.43, 'col':'darkviolet', 'Eg':0.094, 'new':True},
+    {'cwv':'high', 'Tc':299.86, 'col':'teal', 'Eg':0.1, 'new':True}
+]
+
+for AD_dict in new_file_dicts:
     Eg = AD_dict['Eg']
     cwv = AD_dict['cwv']
-    atm_data = atmospheric_dataset(cwv)
+    if AD_dict['new'] == True:
+        atm_data = atmospheric_dataset_new(cwv)
+    else:
+        atm_data = atmospheric_dataset(cwv)
+
     TRD = planck_law_body(T=AD_dict['Tc'], Ephs=atm_data.photon_energies)
     comb_TRDenv = TRD_in_atmosphere(TRD, atm_data)
     if fix_Eg:
         arg_fix_extra.update({'Eg':Eg})  #<--- comment out if Eg is to be optimized
     to_plot += [{'TRD in env':comb_TRDenv, 'label':f'cwv{cwv}', 'colour':AD_dict['col'], 'arg_fix_extra': arg_fix_extra}]
+
+
+
 
 # TRD_300K = planck_law_body(T=300, Ephs=Ephs)
 # for Te, colT in zip([3,200],['black','dimgrey']):

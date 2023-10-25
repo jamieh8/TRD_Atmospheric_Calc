@@ -18,32 +18,11 @@ def interpolation_method(x_predict, x_known, y_known, Eph):
     :return: Array of y values estimated for each of the x / angles requested
     '''
 
-    # Chop out angles > 80 for separate handling
-    # ind_80 = np.where(x_predict==80)[0]
-    # x_pred_split = np.split(x_predict, ind_80)
-    # x_predict_geq80 = x_pred_split[1]
-    # bb = planck_law_body(T=300, Ephs=Eph)
-    # SDphotflux = bb.angle_spectral_photon_flux(Eph, 0)
-    # rad_per_eV = q * Eph * SDphotflux  # [s-1.m-2.sr-1/eV]*[eV]*[J/eV]
-    # rad_per_um = rad_per_eV * Eph ** 2 / (h * c / q) * 1e-6  # [W.m-2.sr-1/eV] * [eV] / [um]
-    #^ use this value for angles > 80
-
     # Transform x values for fitting/interpolation
     # p frac (p/p0 = 1/cos(theta))
     # x_predict = x_pred_split[0]
     new_x_predict = 1 / np.cos(np.radians(x_predict))
     new_x_known = 1 / np.cos(np.radians(x_known))
-
-    # x = p-p0 = p0*(1/costheta - 1)
-    # new_x_known = 1 / np.cos(np.radians(x_known)) - 1
-    # new_x_predict = 1 / np.cos(np.radians(x_predict)) - 1
-
-    # Basic interpolation with numpy
-    # y_predict = np.interp(x=x_predict, xp=x_known, fp=y_known)
-
-    # Linear Fit with numpy
-    # fit_parms = np.polyfit(x=x_known, y=y_known, deg=1)
-    # y_predict = fit_parms[0]*x_predict + fit_parms[1]
 
     # Interpolation + Extrapolation with scipy
     scp_int_ext = interpolate.interp1d(new_x_known, y_known, bounds_error=False, fill_value='extrapolate')
@@ -53,12 +32,16 @@ def interpolation_method(x_predict, x_known, y_known, Eph):
 
 
 
-atm_data = atmospheric_dataset(cwv=24)
+# atm_data = atmospheric_dataset(cwv=24)
+atm_data = atmospheric_dataset_new(cwv='low')
+
+known_angles = [0,10,20,30,40,53,60,65,70,75,80,85]
+col_heads = [f'downwelling_{theta}' for theta in known_angles]
 
 Ephs = atm_data.photon_energies
 wls = atm_data.wavelengths
 
-angle_array = np.arange(0,80,1)
+angle_array = np.arange(0,86,1)
 
 
 # make heatmap
@@ -90,7 +73,7 @@ xvals = 'um'
 
 
 dat_2D = []
-for col_head in ['downwelling_0', 'downwelling_53', 'downwelling_70']:
+for col_head in col_heads:
     dat_2D += [atm_data.retrieve_spectral_array(yvals, xvals, col_head)]
 dat_2D = np.array(dat_2D)  # in units [yvals.sr-1.xvals-1]
 
@@ -138,7 +121,7 @@ if include_slices:
         slice_ax.plot(angle_array, spectral_rad_slice, '--', label=f'{swav} {xvals}', c=col)
 
         not_int_slice = dat_2D[:,si]  # not interpolated data at particular wavelength
-        for angle_i, L_i in zip([0,53,70], not_int_slice):
+        for angle_i, L_i in zip(known_angles, not_int_slice):
 
             # plot point for uninterpolated data
             y = L_i
@@ -154,7 +137,7 @@ if include_slices:
                 axs[2].plot(1/np.cos(np.radians(angle_i)), y, 'o', c=col)
 
                 new_x_interp = 1 / np.cos(np.radians(angle_array))
-                interpolated_vals_forwav = interpolation_method(x_predict=angle_array, x_known=[0,53,70], y_known = not_int_slice, Eph= Eph)
+                interpolated_vals_forwav = interpolation_method(x_predict=angle_array, x_known=known_angles, y_known = not_int_slice, Eph= Eph)
                 axs[2].plot(new_x_interp, interpolated_vals_forwav, '--', c=col)
 
         h_ax.plot(2*[swav], [angle_array[0],angle_array[-1]], '--', c=col)

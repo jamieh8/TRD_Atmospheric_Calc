@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 from TRD_Atmospheric_Functions import *
 
+
+
 label_to_colour = {'downwelling_flux':'darkorange', 'upwelling_flux':'darkmagenta', 'net_flux':'goldenrod'}
 
 # cwv = 10  # column water vapor in mm, have data for 10, 24 and 54 mm
@@ -10,8 +12,8 @@ label_to_colour = {'downwelling_flux':'darkorange', 'upwelling_flux':'darkmagent
 # label_to_colour.update({'downwelling_0':'navy', 'downwelling_53':'lightseagreen', 'downwelling_70':'slateblue'})
 
 cwv = 'low'
-atm_dat = atmospheric_dataset_new(cwv)
-zenith_angles = [0,10,20,30,40,53,60,65,70,75,80,85]
+atm_dat = atmospheric_dataset_new(cwv, 'tamanrasset')
+zenith_angles = atm_dat.zenith_angles
 radiance_labels = [f'downwelling_{theta}' for theta in zenith_angles]
 
 cmap = matplotlib.colormaps['turbo']
