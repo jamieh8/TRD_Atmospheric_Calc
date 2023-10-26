@@ -39,6 +39,8 @@ for line_dict in vert_line_dicts:
 ax_scatter = axs[1]
 ax_scatter.set_xlabel('TCWV [mm]')
 ax_scatter.set_ylabel('Skin Temp [K]')
+ax_scatter.minorticks_on()
+ax_scatter.grid()
 
 ax_hist = axs[0]
 ax_hist.set_xlabel('TCWV [mm]')

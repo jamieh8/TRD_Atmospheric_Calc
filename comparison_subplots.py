@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 from TRD_Atmospheric_Functions import *
 from matplotlib.ticker import AutoMinorLocator, FixedLocator
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 
 def Eph_to_v(x):
     return convert_from(x, units_in = 'photon energy [eV]', units_out = 'wavenumber [cm-1]')
@@ -65,16 +67,16 @@ angle_array = np.arange(0,91,1)
 Egs_AD = np.arange(0.0125, 0.3, 0.002)
 
 datasets = [
-    # {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
+    {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
     {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
-    # {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
+    {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
 
-    # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
-    # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
+    {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
+    {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
     {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
-    #
-    # {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
-    # {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
+
+    {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
+    {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
     {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
     ]
 
@@ -129,7 +131,16 @@ for ds in datasets:
 #
 # comparison_lst[-1].update({'label position':'below'})  # required for Tatm Telfer high, to accomodate Telfer mid
 
-include_photflux_plots = True
+
+custom_muopt_legend = [Line2D([0],[0], color = 'k', linestyle='solid', label='LBLTRM modelling'),
+                       Line2D([0],[0], color = 'k', linestyle='dashed', label='Effective temperature approx'),
+                       Patch(facecolor='darkorange', label='Telfer low'),
+                       Patch(facecolor='darkviolet', label='Telfer mid'),
+                       Patch(facecolor='teal', label='Telfer high'),
+                       Patch(facecolor='black', label='3K BB')]
+
+
+include_photflux_plots = False
 include_Ndot_diff = False
 include_heaviside_ex = False
 
@@ -137,8 +148,10 @@ include_muopt_plots = False
 opt_Eg_and_mu = True  # adds points at optimal Eg
 log_power = True
 atmdat_background = True
+use_cust_legend = True
 
-include_Eg_PD_scatter = False
+include_Eg_PD_scatter = True
+
 
 secondary_ticks = 'wavenumber'  # 'wavelength'
 
@@ -155,7 +168,7 @@ if include_muopt_plots:
     fig_Popt, axs_Popt = plt.subplots(1,2, layout='tight')
 
     if atmdat_background:
-        ref_dataset = atmospheric_dataset_new('low')
+        ref_dataset = atmospheric_dataset_new('low', 'telfer')
         downwelling_photflux = ref_dataset.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV',
                                                                    col_name='downwelling_flux')
         dwn_flux_yaxs = axs_Popt[0].twinx()
@@ -243,14 +256,18 @@ for sample_dct in comparison_lst:
 
         if include_muopt_plots:
             axs_Popt[0].plot(opt_xs['Eg'], pd, 'o', **style_args)
-            label_pos = sample_dct.get('label position')
-            if label_pos == 'below':
-                axs_Popt[0].text(s = sample_dct['label'], x=opt_xs['Eg'], y=pd-y_offset, c=style_args['color'], ha='right', va='top')
-            else:
-                axs_Popt[0].text(s=sample_dct['label'], x=opt_xs['Eg'], y=pd + y_offset, c=style_args['color'],
-                                     ha='right', va='bottom')
+            if use_cust_legend != True:
+                # if no custom legend, label optimal pts
+                label_pos = sample_dct.get('label position')
+                if label_pos == 'below':
+                    axs_Popt[0].text(s = sample_dct['label'], x=opt_xs['Eg'], y=pd-y_offset, c=style_args['color'], ha='right', va='top')
+                else:
+                    axs_Popt[0].text(s=sample_dct['label'], x=opt_xs['Eg'], y=pd + y_offset, c=style_args['color'],
+                                         ha='right', va='bottom')
 
         if include_Eg_PD_scatter:
+            print(sample_dct['label'])
+            print(pd)
             axs_scatter.plot(opt_xs['Eg'], pd, **sample_dct['scatter format'])
 
 
@@ -303,7 +320,9 @@ if include_muopt_plots:
         axs_Popt[0].set_yscale('log')
     axs_Popt[0].set_xlabel('Bandgap, E$_\mathrm{g}$ [eV]')
     axs_Popt[0].set_ylabel('Max Power Density [W.m$^{-2}$]')
-    # axs_Popt[0].legend()
+
+    if use_cust_legend:
+        axs_Popt[0].legend(handles=custom_muopt_legend, loc='upper right')
 
     axs_Popt[1].set_xlabel('Bandgap, E$_\mathrm{g}$ [eV]')
     axs_Popt[1].set_ylabel('V$_\mathrm{mpp}$ [V]')
@@ -326,5 +345,7 @@ if include_muopt_plots:
 if include_Eg_PD_scatter:
     axs_scatter.set_xlabel('Optimal Bandgap, E$_g$ [eV]')
     axs_scatter.set_ylabel('Max Power Density [W.m$^{-2}$]')
+    axs_scatter.minorticks_on()
+    axs_scatter.grid()
 
 plt.show()

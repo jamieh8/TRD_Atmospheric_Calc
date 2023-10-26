@@ -129,7 +129,8 @@ for case in to_plot:
 
 pd_ax = axs[0]
 if relative_change:
-    pd_ax.set_ylabel(f'P / P({x_vals_sweep[-1]:.0f})')
+    # pd_ax.set_ylabel(f'Relative Power Density, P/P({x_vals_sweep[-1]:.0f})')
+    pd_ax.set_ylabel('Relative Power Density, $\\frac{P_{\\theta_c}}{P(90^\circ)}$')
 else:
     pd_ax.set_ylabel(r'Power Density [W.m$^{-2}$]')
 pd_ax.set_xlabel(xlabel_str)
