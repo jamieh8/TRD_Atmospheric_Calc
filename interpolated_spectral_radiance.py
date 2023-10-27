@@ -33,9 +33,9 @@ def interpolation_method(x_predict, x_known, y_known, Eph):
 
 
 # atm_data = atmospheric_dataset(cwv=24)
-atm_data = atmospheric_dataset_new(cwv='low')
+atm_data = atmospheric_dataset_new(cwv='high', location='telfer')
 
-known_angles = [0,10,20,30,40,53,60,65,70,75,80,85]
+known_angles = atm_data.zenith_angles
 col_heads = [f'downwelling_{theta}' for theta in known_angles]
 
 Ephs = atm_data.photon_energies

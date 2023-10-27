@@ -44,53 +44,58 @@ comparison_lst = []
 # # cwv, T = 10, 296.724
 # # cwv, T = 24, 304.868
 # cwv, T = 54, 303.512
-# atm_data = atmospheric_dataset(cwv=cwv)
-# Ephs = atm_data.photon_energies
-# emitter_planck = planck_law_body(T=T, Ephs=Ephs)
+cwv_str = 'high'
+loc_str = 'telfer'
+Tskin = 299.86
+atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
+Ephs = atm_data.photon_energies
+emitter_planck = planck_law_body(T=Tskin, Ephs=Ephs)
 angle_array = np.arange(0,91,1)
-# Egs_AD = np.arange(0.062, 0.2, 0.002)
-#
-# cmap = plt.get_cmap('tab10')
-# cutoff_angles = np.arange(10,95,20)
-# for ai, cutoff_angle in enumerate(cutoff_angles):
-#     line_format_dct = {'color':cmap(ai), 'linestyle':'solid'}
-#     comparison_lst += [{'label':f'cwv{cwv}, cutoff {cutoff_angle}', 'color':cmap(ai), 'line_format_dct':line_format_dct,
-#                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
-#                         'cutoff angle':cutoff_angle, 'Egs':Egs_AD, 'use diffusivity approx':False}]
-#
-# line_format_diff = {'color':'black', 'linestyle':'dashed', 'dashes':(4,4)}
-# comparison_lst += [{'label': f'cwv{cwv}, diffusivity approx 53$^\circ \\times \pi$', 'line_format_dct':line_format_diff,
-#                     'atmospheric dataset': atm_data, 'emitter body': emitter_planck,
-#                     'cutoff angle': None, 'Egs': Egs_AD, 'use diffusivity approx': True}]
+Egs_AD = np.arange(0.02, 0.2, 0.02)
+
+cmap = plt.get_cmap('tab10')
+cutoff_angles = np.arange(10,95,20)
+for ai, cutoff_angle in enumerate(cutoff_angles):
+    line_format_dct = {'color':cmap(ai), 'linestyle':'solid'}
+    comparison_lst += [{'label':f'{loc_str} {cwv_str}, cutoff {cutoff_angle}', 'color':cmap(ai),
+                        'line format':line_format_dct, 'scatter format':{'marker':'o', 'c':cmap(ai)},
+                        'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
+                        'cutoff angle':cutoff_angle, 'Egs':Egs_AD, 'use diffusivity approx':False}]
+
+line_format_diff = {'color':'black', 'linestyle':'dashed', 'dashes':(4,4)}
+comparison_lst += [{'label': f'{loc_str} {cwv_str}, diffusivity approx 53$^\circ \\times \pi$',
+                    'line format':line_format_diff, 'scatter format':{'marker':'o', 'c':'k'},
+                    'atmospheric dataset': atm_data, 'emitter body': emitter_planck,
+                    'cutoff angle': None, 'Egs': Egs_AD, 'use diffusivity approx': True}]
+
 
 # comparing new datasets:
-Egs_AD = np.arange(0.0125, 0.3, 0.002)
-
-datasets = [
-    {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
-
-    {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
-    {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
-    {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
-
-    {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
-    {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
-    {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
-    ]
-
-for ds in datasets:
-    cwv_str = ds['cwvstring']
-    loc_str = ds['loc']
-    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
-    Ephs = atm_data.photon_energies
-    line_format_dct = {'color': ds['color'], 'linestyle': 'solid'}
-    scatter_format = {'c': ds['color'], 'marker': ds['symbol'], 'markersize':8}
-    emitter_planck = planck_law_body(T=ds['Tskin'], Ephs=Ephs)
-    comparison_lst += [{'label': f'{loc_str} {cwv_str}', 'line format':line_format_dct, 'scatter format':scatter_format,
-                        'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
-                         'cutoff angle':None, 'use diffusivity approx':True, 'Egs':Egs_AD}]
+# Egs_AD = np.arange(0.0125, 0.3, 0.002)
+# datasets = [
+#     {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
+#     {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
+#     {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
+#
+#     {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
+#     {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
+#     {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
+#
+#     {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
+#     {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
+#     {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
+#     ]
+#
+# for ds in datasets:
+#     cwv_str = ds['cwvstring']
+#     loc_str = ds['loc']
+#     atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
+#     Ephs = atm_data.photon_energies
+#     line_format_dct = {'color': ds['color'], 'linestyle': 'solid'}
+#     scatter_format = {'c': ds['color'], 'marker': ds['symbol'], 'markersize':8}
+#     emitter_planck = planck_law_body(T=ds['Tskin'], Ephs=Ephs)
+#     comparison_lst += [{'label': f'{loc_str} {cwv_str}', 'line format':line_format_dct, 'scatter format':scatter_format,
+#                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
+#                          'cutoff angle':None, 'use diffusivity approx':True, 'Egs':Egs_AD}]
 
 
 # comparing different cwvs
@@ -140,7 +145,7 @@ custom_muopt_legend = [Line2D([0],[0], color = 'k', linestyle='solid', label='LB
                        Patch(facecolor='black', label='3K BB')]
 
 
-include_photflux_plots = False
+include_photflux_plots = True
 include_Ndot_diff = False
 include_heaviside_ex = False
 
