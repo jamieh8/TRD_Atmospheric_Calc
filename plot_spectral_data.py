@@ -1,12 +1,25 @@
 import matplotlib.pyplot as plt
+import matplotlib
 from TRD_Atmospheric_Functions import *
 
-cwv = 10  # column water vapor in mm, have data for 10, 24 and 54 mm
 
-atm_dat = atmospheric_dataset(cwv)
 
-label_to_colour = {'downwelling_0':'navy', 'downwelling_53':'lightseagreen', 'downwelling_70':'slateblue',
-                   'downwelling_flux':'deeppink', 'upwelling_flux':'darkmagenta', 'net_flux':'goldenrod'}
+label_to_colour = {'downwelling_flux':'darkorange', 'upwelling_flux':'darkmagenta', 'net_flux':'goldenrod'}
+
+# cwv = 10  # column water vapor in mm, have data for 10, 24 and 54 mm
+# atm_dat = atmospheric_dataset(cwv)
+# radiance_labels = ['downwelling_0', 'downwelling_53', 'downwelling_70']
+# label_to_colour.update({'downwelling_0':'navy', 'downwelling_53':'lightseagreen', 'downwelling_70':'slateblue'})
+
+cwv = 'low'
+atm_dat = atmospheric_dataset_new(cwv, 'tamanrasset')
+zenith_angles = atm_dat.zenith_angles
+radiance_labels = [f'downwelling_{theta}' for theta in zenith_angles]
+
+cmap = matplotlib.colormaps['turbo']
+for i, rad_lab in enumerate(radiance_labels):
+    label_to_colour.update({rad_lab:cmap(i/(len(zenith_angles)-1))})
+
 
 rad_units_cm = '$\mathrm{W.cm^{-2}.sr^{-1}}$'
 irrad_units_cm = '$\mathrm{W.cm^{-2}}$'
@@ -15,7 +28,7 @@ irrad_units_m = '$\mathrm{W.m^{-2}}$'
 plot_units = [
     {'x_ret':'cm-1', 'y_ret':'W.cm-2', 'x_label':'Wavenumber, $\\tilde{v}$ [cm$^{-1}$]', 'x_array':atm_dat.wavenumbers,
      'y_label_sr':f'Spectral Radiance, L$_e$ [{rad_units_cm}'+'/cm$^{-1}$]',
-     'y_label_nosr':f'Spectral Irradiance, E$_e$ [{irrad_units_cm}'+'/cm$^{-1}$]'},
+     'y_label_nosr':f'Spectral Irradiance, F$_e$ [{irrad_units_cm}'+'/cm$^{-1}$]'},
 
     {'x_ret':'um', 'y_ret':'W.m-2', 'x_label':'Wavelength, $\lambda$ [um]', 'x_array':atm_dat.wavelengths,
      'y_label_sr':f'Spectral Radiance, L$_e$ [{rad_units_m}/um]',
@@ -29,7 +42,7 @@ plot_units = [
 
 fig, axs = plt.subplots(2,len(plot_units), layout='tight')
 
-radiance_labels = ['downwelling_0', 'downwelling_53', 'downwelling_70']
+
 flux_labels = ['downwelling_flux']#, 'upwelling_flux', 'net_flux']
 
 for ci, unit_set in enumerate(plot_units):
