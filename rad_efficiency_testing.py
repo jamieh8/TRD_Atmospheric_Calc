@@ -52,12 +52,12 @@ ax_scatter.set_xlabel('Humidity / cwv [kg.m$^{-2}$]')
 ax_scatter.set_ylabel('Power Density [W.m$^{-2}$]')
 ax_scatter.minorticks_on()
 
-reflines = [{'y':1e3/24, 'string':'daily average solar', 'line args':{'linestyle':'--', 'color':'orangered'}, 'text args':{'color':'orangered', 'va':'top'}},
-            {'y':51, 'string':'300K to 3K limit', 'line args':{'linestyle':'--', 'color':'black'}, 'text args':{'color':'black', 'va':'bottom'}}]
+reflines = [{'y':1e3/24, 'string':'daily avg solar', 'xl':20, 'xr':55, 'xt':50, 'arrow args':{'arrowstyle':'->', 'color':'orangered'}, 'text args':{'color':'orangered', 'va':'top', 'ha':'right'}},
+            {'y':51, 'string':'300K to 3K limit', 'xl':0, 'xr':35, 'xt':5, 'arrow args':{'arrowstyle':'<-', 'color':'black'}, 'text args':{'color':'black', 'va':'bottom', 'ha':'left'}}]
 for rl in reflines:
-    ax_scatter.annotate(text='', xy=(55,rl['y']), xytext=(0,rl['y']), arrowprops=dict(arrowstyle='->'))
+    ax_scatter.annotate(text='', xy=(rl['xr'],rl['y']), xytext=(rl['xl'],rl['y']), arrowprops=rl['arrow args'])
     ax_scatter.plot([0,60],2*[rl['y']], color='white', lw=1)
-    ax_scatter.text(s=rl['string'],x=25, y=rl['y'], ha='center', **rl['text args'])
+    ax_scatter.text(s=rl['string'], x=rl['xt'], y=rl['y'], **rl['text args'])
 
 sample_area = 8  # [m-2]
 power_magnitudes_guides = [{'label':'Average single person household in Australia for 1 day', 'PD':8*1e3 / (sample_area*24)},
@@ -77,6 +77,7 @@ sec_yaxs = ax_scatter.secondary_yaxis('right', functions=(lambda x: x*24, lambda
 
 sec_yaxs.set_ylabel('Energy Density over 24h [Wh.m$^{-2}$]')
 # axs_scatter.set_title('$\eta_\mathrm{ext}$=10$^{-2}$, $E_\mathrm{g}=0.1$ eV')
+
 
 # ------------------------ Sweep eta_ext ------------------------
 # Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]

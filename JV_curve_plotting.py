@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib
-import seaborn as sns
+# import seaborn as sns
 from TRD_Atmospheric_Functions import *
 
 # Drawing I-V, power curves
@@ -10,8 +10,9 @@ cmap_pink = matplotlib.colormaps['RdPu']
 cmap_PiGrdiv = matplotlib.colormaps['PiYG']
 cmap_coolwarm = matplotlib.colormaps['coolwarm']
 cmap_rainbow = matplotlib.colormaps['jet']
+cmap_magma = matplotlib.colormaps['magma']
 hue_neg, hue_pos = 250, 15
-cmap_custom_div = sns.diverging_palette(hue_neg, hue_pos, l=70, center='dark', as_cmap=True)
+# cmap_custom_div = sns.diverging_palette(hue_neg, hue_pos, l=70, center='dark', as_cmap=True)
 
 Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
 
@@ -33,14 +34,16 @@ rad_eff = 1
 Egs = np.arange(0.062, 0.2, 0.01) # np.arange(0.155, 0.21, 0.01)
 Eg_opt = 0.094
 for i, Eg in enumerate(Egs):
-    if Eg < Eg_opt:
-        coli = (Eg-Egs[0])/(Eg_opt-Egs[0]) * 0.5
-    else:
-        coli = (Eg-Eg_opt)/Egs[-1] + 0.5
-    col = cmap_coolwarm(coli)
+    # colour map around optimal Eg
+    # if Eg < Eg_opt:
+    #     coli = (Eg-Egs[0])/(Eg_opt-Egs[0]) * 0.5
+    # else:
+    #     coli = (Eg-Eg_opt)/Egs[-1] + 0.5
+    # col = cmap_coolwarm(coli)
+    col = cmap_plasma(i/len(Egs))
     to_plot += [{'label':f'E$_g$ = {Eg:.3f}', 'color':col, 'linestyle':'-',
                  'TRD in atm': combined_atmd, 'Eg':Eg,
-                 'nonrad':True, 'rad efficiency':rad_eff}]
+                 'nonrad':False, 'rad efficiency':rad_eff}]
 
 # Blackbody Env
 # Te_001 = Tc*0.01
