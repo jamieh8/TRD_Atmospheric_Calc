@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from TRD_Atmospheric_Functions import *
-
+from matplotlib.lines import Line2D
 
 
 
@@ -46,7 +46,7 @@ for ds in datasets:
     line_format_dct = {'color': ds['color'], 'linestyle': 'solid'}
     scatter_format = {'c': ds['color'], 'marker': ds['symbol'], 'markersize':8}
     emitter_planck = planck_law_body(T=ds['Tskin'], Ephs=Ephs)
-    comparison_lst += [{'label': f'{loc_str} {cwv_str}', 'colour':ds['color'],
+    comparison_lst += [{'label': f'{loc_str} {cwv_str}', 'colour':ds['color'], 'scatter format':scatter_format,
                         'cwv':ds['tcwv'],
                         'TRD in atm':TRD_in_atmosphere(emitter_planck, atm_data)}]
 
@@ -54,7 +54,7 @@ for ds in datasets:
 
 emitter_planck = planck_law_body(T=300)
 env_planck = planck_law_body(T=3)
-comparison_lst += [{'label': f'3K', 'colour':'black',
+comparison_lst += [{'label': f'3K', 'colour':'black','scatter format': {'c':'k', 'marker':'o', 'markersize':8},
                         'cwv':0,
                         'TRD in atm':TRD_in_atmosphere(emitter_planck, env_planck)}]
 
@@ -64,32 +64,37 @@ alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
 
 
 fig_scatter, axs = plt.subplots(1,2,layout='tight', sharey='all', width_ratios=[1,2])
-Eg = 0.1
+diodes = [{'Eg':0.094, 'eta':0.01, 'styleargs':{}}, {'Eg':0.25, 'eta':0.1, 'styleargs':{'mfc':'none', 'mew':2}}]
 ax_scatter = axs[0]
-style_arg_lst = [{'marker':'o'}, {'marker':'o', 'mfc':'none', 'mew':2}]
-for eta, style_args in zip([1e-2, 1e-1], style_arg_lst):
+for diode in diodes:
     for case in comparison_lst:
         opt_xs, opt_pd = get_best_pd(case['TRD in atm'],
                                      args_to_opt=args_to_opt,
-                                     args_to_fix={'cutoff_angle':None, 'eta_ext':eta, 'Eg':Eg, 'consider_nonrad':True},
+                                     args_to_fix={'cutoff_angle':None, 'eta_ext':diode['eta'], 'Eg':diode['Eg'], 'consider_nonrad':True},
                                      alg=alg_powell)
-        style_args.update({'c':case['colour']})
+
+        style_args = diode['styleargs']
+        style_args.update(case['scatter format'])
         ax_scatter.plot(case['cwv'], opt_pd[0]*(-1), **style_args)
 
+
 ax_scatter.set_yscale('log')
-ax_scatter.set_xlabel('Humidity / cwv [kg.m$^{-2}$]')
+ax_scatter.set_xlabel('TCWV [mm]')
 ax_scatter.set_ylabel('Power Density [W.m$^{-2}$]')
 ax_scatter.minorticks_on()
 
-reflines = [{'y':1e3/24, 'string':'daily avg solar', 'xl':20, 'xr':55, 'xt':50, 'arrow args':{'arrowstyle':'->', 'color':'orangered'}, 'text args':{'color':'orangered', 'va':'top', 'ha':'right'}},
+reflines = [{'y':1e3/24, 'string':'daily avg solar', 'xl':40, 'xr':75, 'xt':70, 'arrow args':{'arrowstyle':'->', 'color':'orangered'}, 'text args':{'color':'orangered', 'va':'top', 'ha':'right'}},
             {'y':51, 'string':'300K to 3K limit', 'xl':0, 'xr':35, 'xt':5, 'arrow args':{'arrowstyle':'<-', 'color':'black'}, 'text args':{'color':'black', 'va':'bottom', 'ha':'left'}}]
 for rl in reflines:
     ax_scatter.annotate(text='', xy=(rl['xr'],rl['y']), xytext=(rl['xl'],rl['y']), arrowprops=rl['arrow args'])
-    ax_scatter.plot([0,60],2*[rl['y']], color='white', lw=1)
+    ax_scatter.plot([0,80],2*[rl['y']], color='white', lw=1)
     ax_scatter.text(s=rl['string'], x=rl['xt'], y=rl['y'], **rl['text args'])
 
+
+
+# Plot power magnitude examples
 sample_area = 8  # [m-2]
-power_magnitudes_guides = [{'label':'Average single person household in Australia for 1 day', 'PD':8*1e3 / (sample_area*24)},
+power_magnitudes_guides = [{'label':'Average single person household \nin Australia for 1 day', 'PD':8*1e3 / (sample_area*24)},
                            {'label':'800W microwave for 15 mins', 'PD':800*0.25 / (sample_area*24)},
                            {'label':'10W LED bulb for 5h', 'PD':10*5 / (sample_area*24)},
                            {'label':'5W phone charger for 2h', 'PD':10 / (sample_area*24)},
@@ -101,9 +106,20 @@ for pguide in power_magnitudes_guides:
 ax_powerguide.set_title(f'Over 24h, {sample_area} m$^2$ can power:')
 ax_powerguide.axis('off')
 
-ax_scatter.set_xlim([0,55])
-sec_yaxs = ax_scatter.secondary_yaxis('right', functions=(lambda x: x*24, lambda x: x/24))
+# Add legend in second plot
+print(diodes)
+custom_muopt_legend = []
+for diode in diodes:
+    Eg, eta = diode['Eg'], diode['eta']
+    custom_muopt_legend += [Line2D([0],[0], linestyle='none', **diode['styleargs'],
+                                   label='E$_\mathrm{g}$=' + f'{Eg} eV' + ', $\eta_\mathrm{ext}=$' + f'{eta*100}%')]
 
+ax_powerguide.legend(handles=custom_muopt_legend, loc='lower left')
+
+ax_scatter.grid()
+ax_scatter.set_xlim([0,75])
+ax_scatter.set_ylim([1e-4, 1e2])
+sec_yaxs = ax_scatter.secondary_yaxis('right', functions=(lambda x: x*24, lambda x: x/24))
 sec_yaxs.set_ylabel('Energy Density over 24h [Wh.m$^{-2}$]')
 # axs_scatter.set_title('$\eta_\mathrm{ext}$=10$^{-2}$, $E_\mathrm{g}=0.1$ eV')
 
