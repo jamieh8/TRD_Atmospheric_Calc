@@ -44,14 +44,14 @@ comparison_lst = []
 # # cwv, T = 10, 296.724
 # # cwv, T = 24, 304.868
 # cwv, T = 54, 303.512
-cwv_str = 'high'
+cwv_str = 'low'
 loc_str = 'telfer'
 Tskin = 299.86
 atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
 Ephs = atm_data.photon_energies
 emitter_planck = planck_law_body(T=Tskin, Ephs=Ephs)
 angle_array = np.arange(0,91,1)
-Egs_AD = np.arange(0.02, 0.2, 0.02)
+Egs_AD = np.arange(0.02, 0.2, 0.05)
 
 cmap = plt.get_cmap('tab10')
 cutoff_angles = np.arange(10,95,20)
@@ -137,12 +137,12 @@ comparison_lst += [{'label': f'{loc_str} {cwv_str}, diffusivity approx 53$^\circ
 # comparison_lst[-1].update({'label position':'below'})  # required for Tatm Telfer high, to accomodate Telfer mid
 
 
-custom_muopt_legend = [Line2D([0],[0], color = 'k', linestyle='solid', label='LBLTRM modelling'),
-                       Line2D([0],[0], color = 'k', linestyle='dashed', label='Effective temperature approx'),
-                       Patch(facecolor='darkorange', label='Telfer low'),
-                       Patch(facecolor='darkviolet', label='Telfer mid'),
-                       Patch(facecolor='teal', label='Telfer high'),
-                       Patch(facecolor='black', label='3K BB')]
+# custom_muopt_legend = [Line2D([0],[0], color = 'k', linestyle='solid', label='LBLTRM modelling'),
+#                        Line2D([0],[0], color = 'k', linestyle='dashed', label='Effective temperature approx'),
+#                        Patch(facecolor='darkorange', label='Telfer low'),
+#                        Patch(facecolor='darkviolet', label='Telfer mid'),
+#                        Patch(facecolor='teal', label='Telfer high'),
+#                        Patch(facecolor='black', label='3K BB')]
 
 
 include_photflux_plots = True
@@ -155,7 +155,7 @@ log_power = True
 atmdat_background = True
 use_cust_legend = True
 
-include_Eg_PD_scatter = True
+include_Eg_PD_scatter = False
 
 
 secondary_ticks = 'wavenumber'  # 'wavelength'

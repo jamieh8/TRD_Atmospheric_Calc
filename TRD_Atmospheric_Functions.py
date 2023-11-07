@@ -86,6 +86,7 @@ class atmospheric_dataset:
         self.wavenumbers = np.array(self.org_xarray['wavenumber'])
         self.wavelengths = convert_from(self.wavenumbers, units_in='wavenumber [cm-1]', units_out='wavelength [um]')
         self.photon_energies = convert_from(self.wavenumbers, units_in='wavenumber [cm-1]', units_out='photon energy [eV]')
+        self.Ndot_dict = {}
 
     def retrieve_spectral_array(self, yvals = 'W.m-2', xvals = 'eV', col_name = 'downwelling_flux'):
         '''
@@ -137,6 +138,20 @@ class atmospheric_dataset:
 
         return effectiveT
 
+    def get_Lph_2D(self):
+        '''Check if Lph_2D attribute is populated. If not, retrieve arrays [s-1.m-2.sr-1/eV]. Return 2D array.'''
+        if hasattr(self, 'Lph_2D'):
+            pass
+        else:
+            dat_2D = []
+            col_heads = [f'downwelling_{theta}' for theta in self.zenith_angles]
+            for col_head in col_heads:
+                dat_2D += [self.retrieve_spectral_array('s-1.m-2', 'eV', col_head)]
+            dat_2D = np.array(dat_2D)  # in units [s-1.m-2.sr-1/eV]
+            self.Lph_2D = dat_2D
+
+        return self.Lph_2D
+
     def interpolate_by_angle(self, dat_2D, angle_array):
         '''
         :param dat_2D:
@@ -187,7 +202,7 @@ class atmospheric_dataset:
 
         angles_rad = np.radians(angle_array)
         angles_known_rad = np.radians(self.zenith_angles)
-        L_2D = self.Lph_2D  # 2D array of L_ph vals, containing directional spectral photon flux [s-1.m-2.sr-1/eV] at 0, 53, 70 degrees
+        L_2D = self.Lph_2D  # 2D array of L_ph vals, containing directional spectral photon flux [s-1.m-2.sr-1/eV] at known angles
 
         for theta in angles_rad:
             # check which pair of angles to use
@@ -225,12 +240,7 @@ class atmospheric_dataset:
             return self.interpolated_cosDSPDF
         else:
             # populate Lph_2D
-            dat_2D = []
-            col_heads = [f'downwelling_{theta}' for theta in self.zenith_angles]
-            for col_head in col_heads:
-                dat_2D += [self.retrieve_spectral_array('s-1.m-2', 'eV', col_head)]
-            dat_2D = np.array(dat_2D)  # in units [s-1.m-2.sr-1/eV]
-            self.Lph_2D = dat_2D
+            self.get_Lph_2D()
 
             # interpolate across zenith angle and store results
             self.interpolated_cosDSPDF = self.interpolate_cosDSPDF(angle_array)
@@ -262,21 +272,59 @@ class atmospheric_dataset:
         spectral_photon_flux = 2 * np.pi *  integral_over_theta  # [s-1.m-2.rad-1/eV]*[rad]
         return spectral_photon_flux  # [s-1.m-2/eV]
 
+    def Lph_costheta_sintheta(self, theta_deg, idx_Eph):
+        theta = np.radians(theta_deg)
+
+        # index of insertion for theta
+        angles_known_rad = np.radians(self.zenith_angles)
+        i_insert = np.searchsorted(angles_known_rad, theta)  # return index of insertion to maintain order
+        if i_insert >= len(angles_known_rad):
+            i_insert = len(angles_known_rad) - 1
+
+        it1, it2 = i_insert - 1, i_insert
+        theta1, theta2 = angles_known_rad[it1], angles_known_rad[it2]
+        angle_multiplier = (1 - np.cos(theta) / np.cos(theta1)) / (1 / np.cos(theta2) - 1 / np.cos(theta1))
+
+        L_2D = self.get_Lph_2D()  # 2D array of L_ph vals, containing directional spectral photon flux [s-1.m-2.sr-1/eV] at known angles
+        L_t1 = L_2D[it1][idx_Eph]
+        L_t2 = L_2D[it2][idx_Eph]
+
+        L_costheta = (L_t2 - L_t1) * angle_multiplier + L_t1 * np.cos(theta)
+
+        return L_costheta * np.sin(theta)
 
     def retrieve_Ndot_heaviside(self, Eg, cutoff_angle):
-        if cutoff_angle == None:
-            # if cutoff_angle is None, use the diffusivity approximation
-            spec_phot_flux = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
+        key = f'Eg{Eg}_cutoff{cutoff_angle}'
+        if key in self.Ndot_dict.keys():
+            return self.Ndot_dict[key]
         else:
-            # if cutoff angle is given, perform integral over interpolated angles
-            angle_array = np.arange(0,90.5,0.5)
-            spec_phot_flux = self.spectral_PDF_with_cutoffangle(angle_array, cutoff_angle)
+            Ephs = self.photon_energies
+            if cutoff_angle == None:
+                # if cutoff_angle is None, use the diffusivity approximation
+                spec_phot_flux = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
+                spec_pf_heavisided = spec_phot_flux * np.heaviside(Ephs - Eg, 0.5)
+            else:
+                # spec_pf_heavisided = []
+                # for iEph, Eph in enumerate(Ephs):
+                #     if Eph >= Eg:
+                #         y, err = integrate.quad(self.Lph_costheta_sintheta, a=0, b=cutoff_angle, args=(iEph))
+                #         spec_pf_heavisided += [2 * np.pi * y]
+                #     else:
+                #         spec_pf_heavisided += [0]
+                # spec_pf_heavisided = np.array(spec_pf_heavisided)
 
-        Ephs = self.photon_energies
-        spec_pf_heavisided = spec_phot_flux * np.heaviside(Ephs-Eg, 0.5)
-        int_over_Eph = np.trapz(spec_pf_heavisided, Ephs)
+                # if cutoff angle is given, perform integral over interpolated angles
+                angle_array = np.arange(0,90.5,0.2)
+                spec_phot_flux = self.spectral_PDF_with_cutoffangle(angle_array, cutoff_angle)
+                spec_pf_heavisided = spec_phot_flux*np.heaviside(Ephs - Eg, 0.5)
 
-        return int_over_Eph
+
+            int_over_Eph = np.trapz(spec_pf_heavisided, Ephs)
+
+            self.Ndot_dict.update({key:int_over_Eph}) # add Eph to dict for ref
+
+            return int_over_Eph
+
 
 class atmospheric_dataset_new(atmospheric_dataset):
     def __init__(self, cwv, location):
@@ -407,8 +455,8 @@ class optimize_powerdensity:
             else:
                 new_args.update({opt_args:x[ai]})
 
-
         power_density = self.trd_in_env.power_density(**new_args)
+        print(power_density)
         return [power_density]
 
     def get_bounds(self):

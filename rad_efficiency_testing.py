@@ -64,7 +64,7 @@ alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
 
 
 fig_scatter, axs = plt.subplots(1,2,layout='tight', sharey='all', width_ratios=[1,2])
-diodes = [{'Eg':0.094, 'eta':0.01, 'styleargs':{}}, {'Eg':0.25, 'eta':0.1, 'styleargs':{'mfc':'none', 'mew':2}}]
+diodes = [{'Eg':0.094, 'eta':1, 'styleargs':{}}, {'Eg':0.094, 'eta':0.01, 'styleargs':{'fillstyle':'right'}}, {'Eg':0.25, 'eta':0.1, 'styleargs':{'mfc':'none', 'mew':2}}]
 ax_scatter = axs[0]
 for diode in diodes:
     for case in comparison_lst:
@@ -103,22 +103,23 @@ ax_powerguide = axs[1]
 for pguide in power_magnitudes_guides:
     ax_powerguide.annotate(pguide['label'], xy=(0,pguide['PD']), xytext=(0.1, pguide['PD']), arrowprops=dict(arrowstyle="->"), va='center')
     # ax_powerguide.text(s=pguide['label'], x=0.05, y=pguide['PD'], ha='left', va='bottom')
+    print(pguide['label'] + ' ' + str(pguide['PD']*24))
 ax_powerguide.set_title(f'Over 24h, {sample_area} m$^2$ can power:')
 ax_powerguide.axis('off')
 
 # Add legend in second plot
-print(diodes)
 custom_muopt_legend = []
 for diode in diodes:
     Eg, eta = diode['Eg'], diode['eta']
     custom_muopt_legend += [Line2D([0],[0], linestyle='none', **diode['styleargs'],
-                                   label='E$_\mathrm{g}$=' + f'{Eg} eV' + ', $\eta_\mathrm{ext}=$' + f'{eta*100}%')]
+                                   label='E$_\mathrm{g}$=' + f'{Eg} eV' + ', $\eta_\mathrm{ext}=$' + f'{eta*100:.0f}%')]
 
 ax_powerguide.legend(handles=custom_muopt_legend, loc='lower left')
 
-ax_scatter.grid()
-ax_scatter.set_xlim([0,75])
+# ax_scatter.grid()
+ax_scatter.set_xlim([-5,75])
 ax_scatter.set_ylim([1e-4, 1e2])
+# ax_powerguide.set_ylim([1e-4, 1e2])
 sec_yaxs = ax_scatter.secondary_yaxis('right', functions=(lambda x: x*24, lambda x: x/24))
 sec_yaxs.set_ylabel('Energy Density over 24h [Wh.m$^{-2}$]')
 # axs_scatter.set_title('$\eta_\mathrm{ext}$=10$^{-2}$, $E_\mathrm{g}=0.1$ eV')

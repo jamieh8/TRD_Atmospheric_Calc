@@ -11,31 +11,33 @@ fig, axs = plt.subplots(1,1)
 # cutoff_angle = 70
 
 # Cutoff Angle & Bandgap. Opt over mu
-# x_sweep = np.linspace(10,90,21)
-# x_id_str = 'cutoff_angle'
-# Eg_start, Eg_end, Eg_count = 0.062, 0.15, 20
-# y_sweep = np.linspace(Eg_start, Eg_end, Eg_count)
-# y_id_str = 'Eg'
-# args_to_opt= ['mu']
-# arg_fix_extra = {'eta_ext':1, 'consider_nonrad':False}
-# commercial_diode_ref = False
-# norm_str = 'default'
-# log_x = False
+x_sweep = np.linspace(10,90,21)
+x_id_str = 'cutoff_angle'
+Eg_start, Eg_end, Eg_count = 0.062, 0.15, 20
+y_sweep = np.linspace(Eg_start, Eg_end, Eg_count)
+y_id_str = 'Eg'
+args_to_opt= ['mu']
+arg_fix_extra = {'eta_ext':1, 'consider_nonrad':False}
+commercial_diode_ref = False
+norm_str = 'default'
+x_log = False
 
 # Rad efficiency & Bandgap. Opt over mu.
-eta_count = 80
-# x_sweep = np.linspace(0.01,1, 40)
-x_sweep = np.logspace(-4,0,num=eta_count,base=10)
-x_id_str = 'eta_ext'
-x_log = True
-Eg_start = 0.02
-Eg_count = 80
-y_sweep = np.linspace(Eg_start, 0.3, Eg_count)
-y_id_str = 'Eg'
-args_to_opt = ['mu']
-arg_fix_extra = {'cutoff_angle':None, 'consider_nonrad':True}
-commercial_diode_ref = True
-norm_str = 'log power'
+# eta_count = 80
+# # x_sweep = np.linspace(0.01,1, 40)
+# x_sweep = np.logspace(-4,0,num=eta_count,base=10)
+# x_id_str = 'eta_ext'
+# x_log = True
+# Eg_start = 0.02
+# Eg_count = 80
+# y_sweep = np.linspace(Eg_start, 0.3, Eg_count)
+# y_id_str = 'Eg'
+# args_to_opt = ['mu']
+# arg_fix_extra = {'cutoff_angle':None, 'consider_nonrad':True}
+# commercial_diode_ref = True
+# norm_str = 'log power'
+
+
 
 alg = pg.scipy_optimize(method='Powell', tol=1e-5)
 # alg = pg.de(gen=50, ftol=1e-5)
@@ -47,8 +49,8 @@ case_dict = {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'co
 
 atm_data = atmospheric_dataset_new(case_dict['cwvstring'], location=case_dict['loc'])
 case_label = case_dict['loc'] + ' ' + case_dict['cwvstring']
-filename = f'PD_{case_label}_etaextlog_-4_0_{eta_count}_Egs_{Eg_start}_02_{Eg_count}.csv'
-# filename = f'PD_{case_label}_cutoffangle_10_90_21_Egs_{Eg_start}_{Eg_end}_{Eg_count}.csv'
+# filename = f'PD_{case_label}_etaextlog_-4_0_{eta_count}_Egs_{Eg_start}_02_{Eg_count}.csv'
+filename = f'PD_{case_label}_cutoffangle_10_90_21_Egs_{Eg_start}_{Eg_end}_{Eg_count}.csv'
 
 # Tc, Te = 300, 3
 # atm_data = planck_law_body(Te, Ephs)
@@ -59,6 +61,10 @@ emitter_planck = planck_law_body(case_dict['Tskin'], atm_data.photon_energies)
 combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data)
 
 relative_to_etaext1 = False
+
+
+# ^^^ setup
+# vvv run!
 
 # Generate new data
 # pds_2d = []
@@ -90,24 +96,24 @@ pds_2d = np.loadtxt(filename, delimiter=',', dtype=float)
 
 
 # Test optimizer
-# alg = pg.scipy_optimize(method='Powell', tol=1e-5)
+alg_opt = pg.scipy_optimize(method='Powell', tol=1e-5)
 # alg = pg.de(gen=50, ftol=1e-4)
-# # Egs_opt = []
-# # Vs_opt = []
-# # pds_opt = []
-# for i in range(5):
-#     opt_xs, opt_pd = get_best_pd(combined_trd_env, args_to_opt=[y_id_str]+args_to_opt+[x_id_str], args_to_fix=arg_fix_extra, alg = alg)
-#     plt.plot(opt_xs[x_id_str], opt_xs[y_id_str], 'x', c='black')
-#     print(opt_pd[0])
-#     print(opt_xs)
-#     # Egs_opt += [opt_res[0][1]]
-#     # Vs_opt += [opt_res[0][0]]
-#     # pds_opt += [opt_res[1][0]]
-#
-# # for str, array in zip(['Egs','Vs','PDs'], [Egs_opt, Vs_opt, pds_opt]):
-# #     print(str)
-# #     for elem in array:
-# #         print(elem)
+# Egs_opt = []
+# Vs_opt = []
+# pds_opt = []
+for i in range(1):
+    opt_xs, opt_pd = get_best_pd(combined_trd_env, args_to_opt=[y_id_str]+args_to_opt+[x_id_str], args_to_fix=arg_fix_extra, alg = alg_opt)
+    plt.plot(opt_xs[x_id_str], opt_xs[y_id_str], 'x', c='black')
+    print(opt_pd[0])
+    print(opt_xs)
+    # Egs_opt += [opt_res[0][1]]
+    # Vs_opt += [opt_res[0][0]]
+    # pds_opt += [opt_res[1][0]]
+
+# for str, array in zip(['Egs','Vs','PDs'], [Egs_opt, Vs_opt, pds_opt]):
+#     print(str)
+#     for elem in array:
+#         print(elem)
 
 
 # Plot heatmap
@@ -170,7 +176,8 @@ if add_loglvls:
 
 # adding commercial diodes for ref
 if commercial_diode_ref:
-    diodes_to_plt = [{'eta_ext':1e-2, 'Eg':0.094, 'style_args':{'marker':'o', 'color':'darkviolet', 'markersize':8}},
+    diodes_to_plt = [{'eta_ext':1, 'Eg':0.094, 'style_args':{'marker':'o', 'color':'darkviolet', 'markersize':8}},
+                      {'eta_ext':1e-2, 'Eg':0.094, 'style_args':{'marker':'o', 'color':'darkviolet', 'markersize':8, 'fillstyle':'right'}},
                      {'eta_ext':1e-1, 'Eg':0.25, 'style_args':{'marker':'o', 'mfc':'none', 'mew':2, 'color':'darkviolet', 'markersize':8}}]
     #{'eta_ext':10**(-2), 'Eg':0.175}, {'eta_ext':10**(-2), 'Eg':0.2}]
     for diode in diodes_to_plt:
@@ -187,6 +194,7 @@ h_ax.set_xlabel(translate_to_label[x_id_str])
 h_ax.set_ylabel(translate_to_label[y_id_str])
 h_ax.set_xlim([x_sweep[0], x_sweep[-1]])
 
-plt.title(f'Optimized over $\mu$, {case_label}')
+# plt.title(f'Optimized over $\mu$, {case_label}')
+# plt.title('Telfer mid')
 
 plt.show()
