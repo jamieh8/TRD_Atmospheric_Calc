@@ -7,7 +7,7 @@ from solcore.constants import kb, c, h, q
 from scipy.constants import sigma
 from scipy.optimize import minimize_scalar
 from scipy import interpolate, integrate
-
+from matplotlib.ticker import AutoMinorLocator, FixedLocator
 
 def convert_from(array_in, units_in, units_out, corresponding_xs=None):
     if units_in == 'wavenumber [cm-1]':
@@ -41,6 +41,33 @@ def convert_from(array_in, units_in, units_out, corresponding_xs=None):
         elif units_out == 'per photon energy [/eV]':
             return 1e-2 * array_in / (h*c/q)
             # [cm-1/m-1][Y/cm-1]/[J.s][m.s-1][eV/J] --> [Y/m-1]/[eV.m] --> [Y/eV]
+
+
+def Eph_to_wl(x):
+    return convert_from(x, units_in = 'photon energy [eV]', units_out = 'wavelength [um]')
+
+def wl_to_Ephs(x):
+    return convert_from(x, units_in='wavelength [um]', units_out='photon energy [eV]')
+
+def add_wl_ticks(ax):
+    secax = ax.secondary_xaxis('top', functions=(Eph_to_wl, wl_to_Ephs))
+    secax.set_xlabel('Wavelength, $\\lambda$ [um]')
+    wl_lbls = [1000, 60, 30, 20, 15, 10, 9, 8, 7, 6,5,4,3,2,1]
+    secax.set_xticks(wl_lbls)
+    wl_minor_ticks = np.array([])
+    for i in range(len(wl_lbls) - 1):
+        diff = wl_lbls[i] - wl_lbls[i + 1]
+        if diff > 10:
+            mtick_spacing = 10
+        else:
+            mtick_spacing = 1
+        new_ticks = np.arange(wl_lbls[i], wl_lbls[i + 1], -mtick_spacing)[1:]
+        wl_minor_ticks = np.append(wl_minor_ticks, new_ticks)
+
+    mtick_mod = list(np.flip(wl_minor_ticks))
+    secax.xaxis.set_minor_locator(FixedLocator(mtick_mod))
+    ax.minorticks_on()
+    # secax.minorticks_on()
 
 
 def Ndot_boltzmann(Eg, T, mu): # particle flux density
@@ -202,7 +229,7 @@ class atmospheric_dataset:
 
         angles_rad = np.radians(angle_array)
         angles_known_rad = np.radians(self.zenith_angles)
-        L_2D = self.Lph_2D  # 2D array of L_ph vals, containing directional spectral photon flux [s-1.m-2.sr-1/eV] at known angles
+        L_2D = self.get_Lph_2D()  # 2D array of L_ph vals, containing directional spectral photon flux [s-1.m-2.sr-1/eV] at known angles
 
         for theta in angles_rad:
             # check which pair of angles to use
@@ -314,7 +341,7 @@ class atmospheric_dataset:
                 # spec_pf_heavisided = np.array(spec_pf_heavisided)
 
                 # if cutoff angle is given, perform integral over interpolated angles
-                angle_array = np.arange(0,90.5,0.2)
+                angle_array = np.arange(0,90.5,0.1)
                 spec_phot_flux = self.spectral_PDF_with_cutoffangle(angle_array, cutoff_angle)
                 spec_pf_heavisided = spec_phot_flux*np.heaviside(Ephs - Eg, 0.5)
 

@@ -33,7 +33,7 @@ fix_Eg = False
 
 # Sweep cutoff angle, optimize over mu (with Eg defined per case)
 args_to_opt = ['mu']
-x_vals_sweep = np.arange(10,91,5)
+x_vals_sweep = np.arange(10,91,1)
 arg_sweep_str = 'cutoff_angle'
 xlabel_str = 'Cutoff Angle, $\\theta_c$ [$\circ$]'
 fix_Eg = True
@@ -50,9 +50,9 @@ to_plot = []
 # ]
 
 new_file_dicts = [
-    # {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o', 'Eg':0.094},
+    {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o', 'Eg':0.094},
     {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o', 'Eg':0.094},
-    # {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o', 'Eg':0.1},
+    {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o', 'Eg':0.101},
 
     # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
     # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
@@ -63,29 +63,29 @@ new_file_dicts = [
     # {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
     ]
 
-for AD_dict in new_file_dicts:
-    try:
-        Eg = AD_dict['Eg']
-    except:
-        Eg = 0.094
-    cwv = AD_dict['tcwv']
-    cwv_str = AD_dict['cwvstring']
-    loc_str = AD_dict['loc']
-    atm_data = atmospheric_dataset_new(cwv_str, loc_str)
-    TRD = planck_law_body(T=AD_dict['Tskin'], Ephs=atm_data.photon_energies)
-    comb_TRDenv = TRD_in_atmosphere(TRD, atm_data)
-    if fix_Eg:
-        arg_fix_extra.update({'Eg':Eg})  #<--- comment out if Eg is to be optimized
-    to_plot += [{'TRD in env':comb_TRDenv, 'label':f'{loc_str} {cwv_str}', 'colour':AD_dict['color'], 'arg_fix_extra': arg_fix_extra}]
+# for AD_dict in new_file_dicts:
+#     try:
+#         Eg = AD_dict['Eg']
+#     except:
+#         Eg = 0.094
+#     cwv = AD_dict['tcwv']
+#     cwv_str = AD_dict['cwvstring']
+#     loc_str = AD_dict['loc']
+#     atm_data = atmospheric_dataset_new(cwv_str, loc_str)
+#     TRD = planck_law_body(T=AD_dict['Tskin'], Ephs=atm_data.photon_energies)
+#     comb_TRDenv = TRD_in_atmosphere(TRD, atm_data)
+#     if fix_Eg:
+#         arg_fix_extra.update({'Eg':Eg})  #<--- comment out if Eg is to be optimized
+#     to_plot += [{'TRD in env':comb_TRDenv, 'label':f'{loc_str} {cwv_str}', 'colour':AD_dict['color'], 'arg_fix_extra': arg_fix_extra}]
 
 
 
 
-# TRD_300K = planck_law_body(T=300, Ephs=Ephs)
-# for Te, colT in zip([3,200],['black','dimgrey']):
-#     env_T = planck_law_body(T=Te, Ephs=Ephs)
-#     comb_TRDenv = TRD_in_atmosphere(TRD_300K, env_T)
-#     to_plot += [{'TRD in env':comb_TRDenv, 'label':f'300K/{Te}K, E$_g$=0.02', 'colour':colT, 'arg_fix_extra': {'Eg':0.02}}]
+TRD_300K = planck_law_body(T=300, Ephs=Ephs)
+for Te, colT in zip([3,200],['black','dimgrey']):
+    env_T = planck_law_body(T=Te, Ephs=Ephs)
+    comb_TRDenv = TRD_in_atmosphere(TRD_300K, env_T)
+    to_plot += [{'TRD in env':comb_TRDenv, 'label':f'300K/{Te}K, E$_g$=0.02', 'colour':colT, 'arg_fix_extra': {'Eg':0.02}}]
 
 
 # Define subplots based on optimization

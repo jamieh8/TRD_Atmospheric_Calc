@@ -12,7 +12,7 @@ label_to_colour = {'downwelling_flux':'darkorange', 'upwelling_flux':'darkmagent
 # label_to_colour.update({'downwelling_0':'navy', 'downwelling_53':'lightseagreen', 'downwelling_70':'slateblue'})
 
 cwv = 'low'
-atm_dat = atmospheric_dataset_new(cwv, 'tamanrasset')
+atm_dat = atmospheric_dataset_new(cwv, 'telfer')
 zenith_angles = atm_dat.zenith_angles
 radiance_labels = [f'downwelling_{theta}' for theta in zenith_angles]
 

@@ -1,12 +1,14 @@
 import matplotlib.pyplot as plt
 from scipy import interpolate
 from TRD_Atmospheric_Functions import *
+from matplotlib.colors import Normalize, LogNorm
 
 def Eph_to_sx(x):
     return convert_from(x, units_in = 'photon energy [eV]', units_out = 'wavenumber [cm-1]')
 
 def sx_to_Ephs(x):
     return convert_from(x, units_in='wavenumber [cm-1]', units_out='photon energy [eV]')
+
 
 
 def interpolation_method(x_predict, x_known, y_known, Eph):
@@ -33,7 +35,11 @@ def interpolation_method(x_predict, x_known, y_known, Eph):
 
 
 # atm_data = atmospheric_dataset(cwv=24)
-atm_data = atmospheric_dataset_new(cwv='high', location='telfer')
+cwv_str, Tskin = 'low', 301.56
+# cwv_str, Tskin = 'mid', 306.43
+# cwv_str, Tskin = 'high', 299.86
+atm_data = atmospheric_dataset_new(cwv=cwv_str, location='telfer')
+emitter = planck_law_body(T=Tskin, Ephs=atm_data.photon_energies)
 
 known_angles = atm_data.zenith_angles
 col_heads = [f'downwelling_{theta}' for theta in known_angles]
@@ -41,13 +47,16 @@ col_heads = [f'downwelling_{theta}' for theta in known_angles]
 Ephs = atm_data.photon_energies
 wls = atm_data.wavelengths
 
-angle_array = np.arange(0,86,1)
+angle_array = np.arange(0,91,1)
 
 
 # make heatmap
-include_slices = True
-include_interpolation = True
-plot_Lcos = False
+include_slices = False
+include_interpolation = False
+plot_Lcos = True
+
+plot_difference = True
+
 
 ncols = 1
 if include_slices:
@@ -58,18 +67,18 @@ if include_interpolation:
 
 fig, axs = plt.subplots(1,ncols, layout='tight')
 
-
-dat_str = r'Spectral Radiance, L$_e$ [$\mathrm{W.m^{-2}.sr^{-1}/um}$]'
-xl_str = 'Wavelength [um]'
-xs = wls
-yvals = 'W.m-2'
-xvals = 'um'
+# dat_str = r'Spectral Radiance, L$_e$ [$\mathrm{W.m^{-2}.sr^{-1}/um}$]'
+# xl_str = 'Wavelength [um]'
+# xs = wls
+# yvals = 'W.m-2'
+# xvals = 'um'
 
 # dat_str = r'Directional, Spectral PDF [$\mathrm{s^{-1}.m^{-2}.sr^{-1}/eV}$]'
-# xl_str = 'Photon Energy, E$_\mathrm{ph}$ [eV]'
-# xs = Ephs
-# yvals = 's-1.m-2'
-# xvals = 'eV'
+dat_str = r'$\Delta$ (L$_\mathrm{ph}$ cos$\,\theta$) [$\mathrm{s^{-1}.m^{-2}.sr^{-1}/eV}$]'
+xl_str = 'Photon Energy, E$_\mathrm{ph}$ [eV]'
+xs = Ephs
+yvals = 's-1.m-2'
+xvals = 'eV'
 
 
 dat_2D = []
@@ -82,12 +91,28 @@ if plot_Lcos:
 else:
     dat_2D_int = atm_data.interpolate_by_angle(dat_2D, angle_array)
 
+if plot_difference:
+    # calculate difference between downwelling and upwelling
+    # at each Eph & theta, calculate Lph costheta
+    Lph_array = np.array([])
+    for Eph in Ephs:
+        Lph_array = np.append(Lph_array, emitter.angle_spectral_photon_flux(Eph=Eph, mu=-0.003))
+    Lph_costheta = []
+    for angle in angle_array:
+        Lph_costheta += [Lph_array * np.cos(np.radians(angle))]
+    Lph_costheta = np.array(Lph_costheta)
+
+    dat_2D_int = Lph_costheta - dat_2D_int
+
 
 if include_slices or include_interpolation:
     h_ax = axs[0]
 else:
     h_ax = axs
-hmap = h_ax.pcolor(xs, angle_array, dat_2D_int, cmap='inferno', shading='nearest')  # heatmap
+
+norm_0mid = Normalize(vmin=-1*1e22, vmax=1*1e22)
+
+hmap = h_ax.pcolor(xs, angle_array, dat_2D_int, cmap='bwr', norm=norm_0mid, shading='nearest')  # heatmap, 'inferno'
 cbar = plt.colorbar(hmap)
 cbar.ax.tick_params(labelsize=10)
 cbar.ax.set_ylabel(dat_str)
@@ -97,7 +122,9 @@ h_ax.set_xlabel(xl_str)
 
 # secax = h_ax.secondary_xaxis('top', functions=(Eph_to_sx, sx_to_Ephs))
 # secax.set_xlabel('Wavenumber [cm$^{-1}$]')
+add_wl_ticks(h_ax)
 
+h_ax.set_ylim([0,90])
 
 # take slices of heatmap, plot separately as line plot
 cmap = plt.get_cmap('tab10')
