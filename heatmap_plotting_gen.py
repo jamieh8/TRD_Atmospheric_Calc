@@ -11,31 +11,31 @@ fig, axs = plt.subplots(1,1)
 # cutoff_angle = 70
 
 # Cutoff Angle & Bandgap. Opt over mu
-x_sweep = np.linspace(10,90,21)
-x_id_str = 'cutoff_angle'
-Eg_start, Eg_end, Eg_count = 0.062, 0.15, 20
-y_sweep = np.linspace(Eg_start, Eg_end, Eg_count)
-y_id_str = 'Eg'
-args_to_opt= ['mu']
-arg_fix_extra = {'eta_ext':1, 'consider_nonrad':False}
-commercial_diode_ref = False
-norm_str = 'default'
-x_log = False
+# x_sweep = np.linspace(10,90,21)
+# x_id_str = 'cutoff_angle'
+# Eg_start, Eg_end, Eg_count = 0.062, 0.15, 20
+# y_sweep = np.linspace(Eg_start, Eg_end, Eg_count)
+# y_id_str = 'Eg'
+# args_to_opt= ['mu']
+# arg_fix_extra = {'eta_ext':1, 'consider_nonrad':False}
+# commercial_diode_ref = False
+# norm_str = 'default'
+# x_log = False
 
 # Rad efficiency & Bandgap. Opt over mu.
-# eta_count = 80
-# # x_sweep = np.linspace(0.01,1, 40)
-# x_sweep = np.logspace(-4,0,num=eta_count,base=10)
-# x_id_str = 'eta_ext'
-# x_log = True
-# Eg_start = 0.02
-# Eg_count = 80
-# y_sweep = np.linspace(Eg_start, 0.3, Eg_count)
-# y_id_str = 'Eg'
-# args_to_opt = ['mu']
-# arg_fix_extra = {'cutoff_angle':None, 'consider_nonrad':True}
-# commercial_diode_ref = True
-# norm_str = 'log power'
+eta_count = 80
+# x_sweep = np.linspace(0.01,1, 40)
+x_sweep = np.logspace(-4,0,num=eta_count,base=10)
+x_id_str = 'eta_ext'
+x_log = True
+Eg_start = 0.02
+Eg_count = 80
+y_sweep = np.linspace(Eg_start, 0.3, Eg_count)
+y_id_str = 'Eg'
+args_to_opt = ['mu']
+arg_fix_extra = {'cutoff_angle':None, 'consider_nonrad':True}
+commercial_diode_ref = True
+norm_str = 'log power'
 
 
 
@@ -49,8 +49,8 @@ case_dict = {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'co
 
 atm_data = atmospheric_dataset_new(case_dict['cwvstring'], location=case_dict['loc'])
 case_label = case_dict['loc'] + ' ' + case_dict['cwvstring']
-# filename = f'PD_{case_label}_etaextlog_-4_0_{eta_count}_Egs_{Eg_start}_02_{Eg_count}.csv'
-filename = f'PD_{case_label}_cutoffangle_10_90_21_Egs_{Eg_start}_{Eg_end}_{Eg_count}.csv'
+filename = f'PD_{case_label}_etaextlog_-4_0_{eta_count}_Egs_{Eg_start}_02_{Eg_count}.csv'
+# filename = f'PD_{case_label}_cutoffangle_10_90_21_Egs_{Eg_start}_{Eg_end}_{Eg_count}.csv'
 
 # Tc, Te = 300, 3
 # atm_data = planck_law_body(Te, Ephs)
@@ -96,16 +96,16 @@ pds_2d = np.loadtxt(filename, delimiter=',', dtype=float)
 
 
 # Test optimizer
-alg_opt = pg.scipy_optimize(method='Powell', tol=1e-5)
-# alg = pg.de(gen=50, ftol=1e-4)
-# Egs_opt = []
-# Vs_opt = []
-# pds_opt = []
-for i in range(1):
-    opt_xs, opt_pd = get_best_pd(combined_trd_env, args_to_opt=[y_id_str]+args_to_opt+[x_id_str], args_to_fix=arg_fix_extra, alg = alg_opt)
-    plt.plot(opt_xs[x_id_str], opt_xs[y_id_str], 'x', c='black')
-    print(opt_pd[0])
-    print(opt_xs)
+# alg_opt = pg.scipy_optimize(method='Powell', tol=1e-5)
+# # alg = pg.de(gen=50, ftol=1e-4)
+# # Egs_opt = []
+# # Vs_opt = []
+# # pds_opt = []
+# for i in range(1):
+#     opt_xs, opt_pd = get_best_pd(combined_trd_env, args_to_opt=[y_id_str]+args_to_opt+[x_id_str], args_to_fix=arg_fix_extra, alg = alg_opt)
+#     plt.plot(opt_xs[x_id_str], opt_xs[y_id_str], 'x', c='black')
+#     print(opt_pd[0])
+#     print(opt_xs)
     # Egs_opt += [opt_res[0][1]]
     # Vs_opt += [opt_res[0][0]]
     # pds_opt += [opt_res[1][0]]
@@ -139,8 +139,8 @@ elif norm_str == 'log power':
         C_2darray = (-1)*np.array(pds_2d)
         cb_label = r'Power Density [W.m$^{-2}$]'
 
-    min_a = np.min(C_2darray)
-    max_a = np.max(C_2darray)
+    min_a = 1e-7#np.min(C_2darray)
+    max_a = 3#np.max(C_2darray)
     norm_log = LogNorm(vmin=min_a, vmax=max_a)
     hmap = h_ax.pcolormesh(x_sweep, y_sweep, C_2darray, cmap='magma', shading='gouraud', norm=norm_log)
     add_loglvls = True
@@ -181,9 +181,11 @@ if commercial_diode_ref:
                      {'eta_ext':1e-1, 'Eg':0.25, 'style_args':{'marker':'o', 'mfc':'none', 'mew':2, 'color':'darkviolet', 'markersize':8}}]
     #{'eta_ext':10**(-2), 'Eg':0.175}, {'eta_ext':10**(-2), 'Eg':0.2}]
     for diode in diodes_to_plt:
+        plt.plot(diode['eta_ext'], diode['Eg'], 'o', markersize=12, c='white')
         plt.plot(diode['eta_ext'], diode['Eg'], **diode['style_args'])
         ind_x = x_sweep.searchsorted(diode['eta_ext'])
         ind_y = y_sweep.searchsorted(diode['Eg'])
+        cbar.ax.plot([0.5], [C_2darray[ind_y][ind_x]], 'o', markersize=12, c='white')
         cbar.ax.plot([0.5], [C_2darray[ind_y][ind_x]], **diode['style_args'])
 
 

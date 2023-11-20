@@ -52,7 +52,7 @@ def wl_to_Ephs(x):
 def add_wl_ticks(ax):
     secax = ax.secondary_xaxis('top', functions=(Eph_to_wl, wl_to_Ephs))
     secax.set_xlabel('Wavelength, $\\lambda$ [um]')
-    wl_lbls = [1000, 60, 30, 20, 15, 10, 9, 8, 7, 6,5,4,3,2,1]
+    wl_lbls = [100, 30, 20, 15, 10, 9, 8, 7, 6,5,4,3,2,1]
     secax.set_xticks(wl_lbls)
     wl_minor_ticks = np.array([])
     for i in range(len(wl_lbls) - 1):
@@ -483,7 +483,7 @@ class optimize_powerdensity:
                 new_args.update({opt_args:x[ai]})
 
         power_density = self.trd_in_env.power_density(**new_args)
-        print(power_density)
+        # print(power_density)
         return [power_density]
 
     def get_bounds(self):

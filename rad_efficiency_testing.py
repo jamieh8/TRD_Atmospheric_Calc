@@ -83,8 +83,8 @@ ax_scatter.set_xlabel('TCWV [mm]')
 ax_scatter.set_ylabel('Power Density [W.m$^{-2}$]')
 ax_scatter.minorticks_on()
 
-reflines = [{'y':1e3/24, 'string':'daily avg solar', 'xl':40, 'xr':75, 'xt':70, 'arrow args':{'arrowstyle':'->', 'color':'orangered'}, 'text args':{'color':'orangered', 'va':'top', 'ha':'right'}},
-            {'y':51, 'string':'300K to 3K limit', 'xl':0, 'xr':35, 'xt':5, 'arrow args':{'arrowstyle':'<-', 'color':'black'}, 'text args':{'color':'black', 'va':'bottom', 'ha':'left'}}]
+reflines = [{'y':29, 'string':'yearly avg solar', 'xl':-5, 'xr':10, 'xt':10, 'arrow args':{'arrowstyle':'<-', 'color':'orangered'}, 'text args':{'color':'orangered', 'va':'center', 'ha':'left'}},
+            {'y':51, 'string':'300K to 3K limit', 'xl':-5, 'xr':10, 'xt':10, 'arrow args':{'arrowstyle':'<-', 'color':'black'}, 'text args':{'color':'black', 'va':'center', 'ha':'left'}}]
 for rl in reflines:
     ax_scatter.annotate(text='', xy=(rl['xr'],rl['y']), xytext=(rl['xl'],rl['y']), arrowprops=rl['arrow args'])
     ax_scatter.plot([0,80],2*[rl['y']], color='white', lw=1)
@@ -93,7 +93,7 @@ for rl in reflines:
 
 
 # Plot power magnitude examples
-sample_area = 8  # [m-2]
+sample_area = 10  # [m-2]
 power_magnitudes_guides = [{'label':'Average single person household \nin Australia for 1 day', 'PD':8*1e3 / (sample_area*24)},
                            {'label':'800W microwave for 15 mins', 'PD':800*0.25 / (sample_area*24)},
                            {'label':'10W LED bulb for 5h', 'PD':10*5 / (sample_area*24)},
@@ -120,8 +120,8 @@ ax_powerguide.legend(handles=custom_muopt_legend, loc='lower left')
 ax_scatter.set_xlim([-5,75])
 ax_scatter.set_ylim([1e-4, 1e2])
 # ax_powerguide.set_ylim([1e-4, 1e2])
-sec_yaxs = ax_scatter.secondary_yaxis('right', functions=(lambda x: x*24, lambda x: x/24))
-sec_yaxs.set_ylabel('Energy Density over 24h [Wh.m$^{-2}$]')
+# sec_yaxs = ax_scatter.secondary_yaxis('right', functions=(lambda x: x*24, lambda x: x/24))
+# sec_yaxs.set_ylabel('Energy Density over 24h [Wh.m$^{-2}$]')
 # axs_scatter.set_title('$\eta_\mathrm{ext}$=10$^{-2}$, $E_\mathrm{g}=0.1$ eV')
 
 

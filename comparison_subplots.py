@@ -10,7 +10,6 @@ def v_to_Ephs(x):
     return convert_from(x, units_in='wavenumber [cm-1]', units_out='photon energy [eV]')
 
 
-
 comparison_lst = []
 
 # comparing different cutoff angles
@@ -109,31 +108,32 @@ for ds in datasets:
 #                         'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
 #
 # comparison_lst[-1].update({'label position':'below'})  # required for Tatm Telfer high, to accomodate Telfer mid
-
-
+#
+#
 # custom_muopt_legend = [Line2D([0],[0], color = 'k', linestyle='solid', label='LBLTRM modelling'),
 #                        Line2D([0],[0], color = 'k', linestyle='dashed', label='Effective temperature approx'),
 #                        Patch(facecolor='darkorange', label='Telfer low'),
 #                        Patch(facecolor='darkviolet', label='Telfer mid'),
 #                        Patch(facecolor='teal', label='Telfer high'),
 #                        Patch(facecolor='black', label='3K BB')]
-custom_muopt_legend = []
+
+# custom_muopt_legend = []
 
 
-include_photflux_plots = True
+include_photflux_plots = False
 include_Ndot_diff = False
 include_heaviside_ex = False
 
-include_muopt_plots = False
+include_muopt_plots = True
 opt_Eg_and_mu = True  # adds points at optimal Eg
 log_power = True
 atmdat_background = True
-use_cust_legend = True
+use_cust_legend = False
 
 include_Eg_PD_scatter = False
 
 
-secondary_ticks = 'wavenumber'  # 'wavelength'
+secondary_ticks = 'wavelength'
 
 
 alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
@@ -152,8 +152,8 @@ if include_muopt_plots:
         downwelling_photflux = ref_dataset.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV',
                                                                    col_name='downwelling_flux')
         dwn_flux_yaxs = axs_Popt[0].twinx()
-        dwn_flux_yaxs.plot(ref_dataset.photon_energies, downwelling_photflux, c='lightgray')
-        dwn_flux_yaxs.set_ylabel('Spectral Photon Flux, $\mathrm{F_{ph} \; [s^{-1}.m^{-2}/eV]}$', color='lightgrey')
+        dwn_flux_yaxs.plot(ref_dataset.photon_energies, downwelling_photflux, c='lightgrey')
+        dwn_flux_yaxs.set_ylabel('Spectral Photon Flux Density, $\mathrm{F_{ph} \; [s^{-1}.m^{-2}/eV]}$', color='lightgrey')
         dwn_flux_yaxs.tick_params(axis='y', labelcolor='lightgrey')
         dwn_flux_yaxs.text(s='Telfer low', x=0.09, y=0.5*1e23, ha='right', color='lightgrey')
 
@@ -325,6 +325,7 @@ if include_muopt_plots:
 if include_Eg_PD_scatter:
     axs_scatter.set_xlabel('Optimal Bandgap, E$_g$ [eV]')
     axs_scatter.set_ylabel('Max Power Density [W.m$^{-2}$]')
+    axs_scatter.set_xlim([0.092, 0.102])
     axs_scatter.minorticks_on()
     axs_scatter.grid()
 
