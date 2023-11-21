@@ -202,7 +202,7 @@ class atmospheric_dataset:
 
         return dat_2D_int
 
-    def interpolate_angle_spectral_data(self, angle_array, yvals = 'W.m-2', xvals='eV'):
+    def interpolate_angle_spectral_data(self, angle_array, yvals = 'W.m-2', xvals = 'eV'):
         '''
         Retrieves 2D array with directional spectral radiance (expressed in y units requested, plus 'sr-1' for directionality).
         Passes this 2D array to interpolate_by_angle, to interpolate according to the angle array requested.
@@ -433,10 +433,18 @@ class planck_law_body:
         if cutoff_angle == None:
             cutoff_angle = 90
             # cutoff angle of None used for diffusivity approx. in planck body case, diff = 90 (same "cost")
-        phot_flux = self.spectral_photon_flux(Ephs, mu, cutoff_angle)
-        phot_flux_heavisided = hvs_weight*phot_flux
 
-        return np.trapz(phot_flux_heavisided, Ephs)
+        # phot_flux = self.spectral_photon_flux(Ephs, mu, cutoff_angle)
+        # phot_flux_heavisided = hvs_weight*phot_flux
+        # integral_over_Eph = np.trapz(phot_flux_heavisided, Ephs)
+        # Ndot = integral_over_Eph
+
+        # ... not using pre-sampled Ephs (for more accuracy)
+        integral_over_Eph = integrate.quad(self.spectral_photon_flux, a=Eg,b=2,args=(mu, cutoff_angle))
+        Ndot = integral_over_Eph[0]
+        # print(integral_over_Eph)
+
+        return Ndot
 
 
 class TRD_in_atmosphere:
@@ -461,7 +469,7 @@ class TRD_in_atmosphere:
         return J * mu
 
     def optimize_mu(self, Eg, cutoff_angle):
-        opt_mu_dwh = minimize_scalar(self.power_density, bounds=[-Eg, 0],
+        opt_mu_dwh = minimize_scalar(self.power_density, bounds=[-10*Eg, 0],
                                      args=(Eg, cutoff_angle))
         return {'max power':opt_mu_dwh.fun, 'Vmpp':opt_mu_dwh.x}
 
@@ -493,7 +501,7 @@ class optimize_powerdensity:
         else:
             Eg_min = 1e-4
         bound_ref = {'Eg':{'min':Eg_min, 'max':0.15},
-                     'mu_frac':{'min':-1, 'max':0},
+                     'mu_frac':{'min':-100, 'max':0},
                      'cutoff_angle':{'min':10, 'max':90},
                      'eta_ext':{'min':0.001, 'max':1}}
 
@@ -537,7 +545,7 @@ def get_best_pd(trd_in_environment, args_to_opt, args_to_fix, alg):
     prob = pg.problem(optimize_powerdensity(trd_in_environment, args_to_opt_mod, args_to_fix))
 
     # initial population
-    pop = pg.population(prob, size=15)
+    pop = pg.population(prob, size=20)
     algo = pg.algorithm(alg)
     # algo.set_verbosity(1)   # toggle for debugging
 

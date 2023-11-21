@@ -44,7 +44,7 @@ for ds in datasets:
 
 # comparing blackbody environments
 Ephs = np.arange(1e-6, 0.31, 0.0001)
-Egs_bb = np.arange(0.001,0.3,0.002)
+Egs_bb = np.arange(0.0001,0.3,0.002)
 emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
 Tsets = [{'Tc':3, 'colour':'black'}]
 #         #, {'Tc':200, 'colour':'navy'}, {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
@@ -118,10 +118,11 @@ axs[0].set_yscale('log')
 axs[0].set_xlabel('Bandgap, E$_\mathrm{g}$ [eV]')
 axs[0].set_ylabel('Max Power Density [W.m$^{-2}$]')
 
+
 axs[0].legend(handles=custom_muopt_legend, loc='upper right')
 
 add_wl_ticks(axs[0])
-
+# axs[0].set_xlim([0,0.3])
 axs[0].set_zorder(dwn_flux_yaxs.get_zorder()+1)
 axs[0].set_frame_on(False)
 
@@ -134,16 +135,16 @@ angle_array = [0]
 Egs_AD = np.arange(0.0125, 0.3, 0.002)
 datasets = [
     {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
-
-    {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
-    {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
-    {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
+    # {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
+    # {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
     #
-    {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
-    {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
-    {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
+    # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
+    # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
+    # {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
+    # #
+    # {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
+    # {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
+    # {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
     ]
 
 for ds in datasets:
