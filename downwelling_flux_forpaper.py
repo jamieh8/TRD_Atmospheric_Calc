@@ -9,7 +9,7 @@ datasets = [
     # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
     # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
     # {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
-    #
+
     # {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
     # {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
     # {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
@@ -29,9 +29,9 @@ ax.set_ylabel('Spectral Photon Flux Density, F$_\mathrm{ph}$ [s$^{-1}$.m$^{-2}$/
 ax.set_xlabel('Photon Energy, E$_\mathrm{ph}$ [eV]')
 ax.legend()
 # ax.set_xlim([0,0.31])
-ax.set_ylim([0,5*1e23])
+# ax.set_ylim([0,5*1e23])
+ax.set_yscale('log')
 add_wl_ticks(ax)
-
 
 
 plt.show()

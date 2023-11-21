@@ -42,33 +42,33 @@ comparison_lst = []
 
 
 # comparing new datasets:
-# angle_array = [0]
-# Egs_AD = np.arange(0.0125, 0.3, 0.002)
-# datasets = [
-#     {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
-#     {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
-#     {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
-#
-#     # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
-#     # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
-#     # {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
-#     #
-#     # {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
-#     # {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
-#     # {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
-#     ]
-#
-# for ds in datasets:
-#     cwv_str = ds['cwvstring']
-#     loc_str = ds['loc']
-#     atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
-#     Ephs = atm_data.photon_energies
-#     line_format_dct = {'color': ds['color'], 'linestyle': 'solid'}
-#     scatter_format = {'c': ds['color'], 'marker': ds['symbol'], 'markersize':8}
-#     emitter_planck = planck_law_body(T=ds['Tskin'], Ephs=Ephs)
-#     comparison_lst += [{'label': f'{loc_str.capitalize()} {cwv_str}', 'line format':line_format_dct, 'scatter format':scatter_format,
-#                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
-#                          'cutoff angle':None, 'use diffusivity approx':True, 'Egs':Egs_AD}]
+angle_array = [0]
+Egs_AD = np.arange(0.0125, 0.3, 0.002)
+datasets = [
+    # {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
+    # {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
+    # {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
+
+    {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
+    {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
+    {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
+    #
+    # {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
+    # {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
+    # {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
+    ]
+
+for ds in datasets:
+    cwv_str = ds['cwvstring']
+    loc_str = ds['loc']
+    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
+    Ephs = atm_data.photon_energies
+    line_format_dct = {'color': ds['color'], 'linestyle': 'solid'}
+    scatter_format = {'c': ds['color'], 'marker': ds['symbol'], 'markersize':8}
+    emitter_planck = planck_law_body(T=ds['Tskin'], Ephs=Ephs)
+    comparison_lst += [{'label': f'{loc_str.capitalize()} {cwv_str}', 'line format':line_format_dct, 'scatter format':scatter_format,
+                        'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
+                         'cutoff angle':None, 'use diffusivity approx':True, 'Egs':Egs_AD}]
 
 
 # comparing different cwvs
@@ -90,26 +90,26 @@ comparison_lst = []
 
 
 # comparing blackbody environments
-Ephs = np.arange(1e-6, 0.31, 0.0001)
-Egs_bb = np.arange(0.001,0.3,0.002)
-emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
-# Tsets = [{'Tc':3, 'colour':'black'}]
-Tsets = [{'Tc':200, 'colour':'navy'}, {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
-
-# effective temperatures
-# for dataset_entry in comparison_lst:
-#     Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(300)
-#     Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
-
-for Ts in Tsets:
-    Tc = Ts['Tc']
-    bb_env = planck_law_body(Tc, Ephs)
-    line_format_dct = {'color': Ts['colour'], 'linestyle': 'dashed'}
-    comparison_lst += [{'label': 'T$_\mathrm{atm}$ = '+f'{Tc:.5g}K', 'line format':line_format_dct,
-                        'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
-                        'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
-
-comparison_lst[-1].update({'label position':'below'})  # required for Tatm Telfer high, to accomodate Telfer mid
+# Ephs = np.arange(1e-6, 0.31, 0.0001)
+# Egs_bb = np.arange(0.001,0.3,0.002)
+# emitter_planck_300 = planck_law_body(T=300, Ephs=Ephs)
+# # Tsets = [{'Tc':3, 'colour':'black'}]
+# Tsets = [{'Tc':200, 'colour':'navy'}, {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
+#
+# # effective temperatures
+# # for dataset_entry in comparison_lst:
+# #     Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(300)
+# #     Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
+#
+# for Ts in Tsets:
+#     Tc = Ts['Tc']
+#     bb_env = planck_law_body(Tc, Ephs)
+#     line_format_dct = {'color': Ts['colour'], 'linestyle': 'dashed'}
+#     comparison_lst += [{'label': 'T$_\mathrm{atm}$ = '+f'{Tc:.5g}K', 'line format':line_format_dct,
+#                         'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
+#                         'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
+#
+# comparison_lst[-1].update({'label position':'below'})  # required for Tatm Telfer high, to accomodate Telfer mid
 
 #
 # custom_muopt_legend = [Line2D([0],[0], color = 'k', linestyle='solid', label='LBLTRM modelling'),
@@ -121,12 +121,12 @@ comparison_lst[-1].update({'label position':'below'})  # required for Tatm Telfe
 
 custom_muopt_legend = []
 
-
-include_photflux_plots = False
+log_atmdat = True
+include_photflux_plots = True
 include_Ndot_diff = False
 include_heaviside_ex = False
 
-include_muopt_plots = True
+include_muopt_plots = False
 opt_Eg_and_mu = True  # adds points at optimal Eg
 log_power = True
 atmdat_background = True
@@ -158,6 +158,8 @@ if include_muopt_plots:
         dwn_flux_yaxs.set_ylabel('Spectral Photon Flux Density, $\mathrm{F_{ph} \; [s^{-1}.m^{-2}/eV]}$', color='lightgrey')
         dwn_flux_yaxs.tick_params(axis='y', labelcolor='lightgrey')
         dwn_flux_yaxs.text(s='Telfer low', x=0.09, y=0.5*1e23, ha='right', color='lightgrey')
+        if log_atmdat:
+            dwn_flux_yaxs.set_yscale('log')
 
 if include_Eg_PD_scatter:
     fig_scatter, axs_scatter = plt.subplots(1,1, layout='tight')
@@ -280,6 +282,9 @@ if include_photflux_plots:
         # secax = spec_ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
         # secax.set_xlabel('Wavenumber [cm$^{-1}$]')
         # secax.tick_params(axis='x', length=7)
+
+        if log_atmdat:
+            spec_ax.set_yscale('log')
 
     for Ndot_ax in [axs_pf[0][1], axs_pf[1][1]]:
         Ndot_ax.set_ylabel('Photon Flux Density, $\mathrm{\dot{N} \;[s^{-1}.m^{-2}]}$')

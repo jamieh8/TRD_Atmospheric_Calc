@@ -83,6 +83,7 @@ dwn_flux_yaxs.plot(ref_dataset.photon_energies, downwelling_photflux, c='lightgr
 dwn_flux_yaxs.set_ylabel('Spectral Photon Flux Density, $\mathrm{F_{ph} \; [s^{-1}.m^{-2}/eV]}$', color='lightgrey')
 dwn_flux_yaxs.tick_params(axis='y', labelcolor='lightgrey')
 dwn_flux_yaxs.text(s='Telfer low', x=0.09, y=0.5 * 1e23, ha='right', color='lightgrey')
+dwn_flux_yaxs.set_yscale('log')
 
 for sample_dct in comparison_lst:
     atm_data = sample_dct['atmospheric dataset']
@@ -108,7 +109,7 @@ for sample_dct in comparison_lst:
     axs[0].plot(Egs, maxPs, **style_args, label=sample_dct['label'])
 
     opt_xs, opt_pd = get_best_pd(combined_obj, args_to_opt=['Eg','mu'],
-                                args_to_fix={'cutoff_angle':None, 'consider_nonrad':False, 'eta_ext':1}, alg=alg_de)
+                                args_to_fix={'cutoff_angle':None, 'consider_nonrad':False, 'eta_ext':1}, alg=alg_powell)
 
     pd = opt_pd[0] * (-1)
     y_offset = 0.15*pd
@@ -122,7 +123,7 @@ axs[0].set_ylabel('Max Power Density [W.m$^{-2}$]')
 axs[0].legend(handles=custom_muopt_legend, loc='upper right')
 
 add_wl_ticks(axs[0])
-# axs[0].set_xlim([0,0.3])
+axs[0].set_xlim([0.009,0.31])
 axs[0].set_zorder(dwn_flux_yaxs.get_zorder()+1)
 axs[0].set_frame_on(False)
 
@@ -135,16 +136,16 @@ angle_array = [0]
 Egs_AD = np.arange(0.0125, 0.3, 0.002)
 datasets = [
     {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
-    # {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
-    # {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
+    {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
+    {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
+
+    {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
+    {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
+    {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
     #
-    # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
-    # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
-    # {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
-    # #
-    # {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
-    # {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
-    # {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
+    {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
+    {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
+    {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
     ]
 
 for ds in datasets:

@@ -422,7 +422,7 @@ class planck_law_body:
         '''
         return self.spectral_photon_flux(Eph, mu, cutoff_angle) * q * Eph  # [s-1.m-2/eV]*[J/eV]*[eV]
 
-    def retrieve_Ndot_heaviside(self, Eg, cutoff_angle=90, mu=0):
+    def retrieve_Ndot_heaviside(self, Eg, cutoff_angle=90, mu=0, int_method='trapz'):
         '''
         :param Eg: Bandgap, in [eV]
         :param mu: Fermi level split, in [eV]
@@ -434,15 +434,17 @@ class planck_law_body:
             cutoff_angle = 90
             # cutoff angle of None used for diffusivity approx. in planck body case, diff = 90 (same "cost")
 
-        # phot_flux = self.spectral_photon_flux(Ephs, mu, cutoff_angle)
-        # phot_flux_heavisided = hvs_weight*phot_flux
-        # integral_over_Eph = np.trapz(phot_flux_heavisided, Ephs)
-        # Ndot = integral_over_Eph
+        if int_method == 'trapz':
+            phot_flux = self.spectral_photon_flux(Ephs, mu, cutoff_angle)
+            phot_flux_heavisided = hvs_weight*phot_flux
+            integral_over_Eph = np.trapz(phot_flux_heavisided, Ephs)
+            Ndot = integral_over_Eph
 
-        # ... not using pre-sampled Ephs (for more accuracy)
-        integral_over_Eph = integrate.quad(self.spectral_photon_flux, a=Eg,b=2,args=(mu, cutoff_angle))
-        Ndot = integral_over_Eph[0]
-        # print(integral_over_Eph)
+        else:
+            # ... not using pre-sampled Ephs (for more accuracy)
+            integral_over_Eph = integrate.quad(self.spectral_photon_flux, a=Eg,b=2,args=(mu, cutoff_angle))
+            Ndot = integral_over_Eph[0]
+            # print(integral_over_Eph)
 
         return Ndot
 
@@ -469,7 +471,7 @@ class TRD_in_atmosphere:
         return J * mu
 
     def optimize_mu(self, Eg, cutoff_angle):
-        opt_mu_dwh = minimize_scalar(self.power_density, bounds=[-10*Eg, 0],
+        opt_mu_dwh = minimize_scalar(self.power_density, bounds=[-0.03, 0],
                                      args=(Eg, cutoff_angle))
         return {'max power':opt_mu_dwh.fun, 'Vmpp':opt_mu_dwh.x}
 
@@ -484,11 +486,7 @@ class optimize_powerdensity:
         # assemble arguments
         new_args = self.args_to_fix
         for ai, opt_args in enumerate(self.args_to_opt):
-            if opt_args == 'mu_frac':
-                new_args.update({'mu':x[ai]*new_args['Eg']})
-                # ^ require 'mu_frac' to be populated last, so that 'Eg' is already defined
-            else:
-                new_args.update({opt_args:x[ai]})
+            new_args.update({opt_args:x[ai]})
 
         power_density = self.trd_in_env.power_density(**new_args)
         # print(power_density)
@@ -501,7 +499,7 @@ class optimize_powerdensity:
         else:
             Eg_min = 1e-4
         bound_ref = {'Eg':{'min':Eg_min, 'max':0.15},
-                     'mu_frac':{'min':-100, 'max':0},
+                     'mu': {'min': -0.03, 'max': 0},
                      'cutoff_angle':{'min':10, 'max':90},
                      'eta_ext':{'min':0.001, 'max':1}}
 
@@ -530,11 +528,7 @@ def get_best_pd(trd_in_environment, args_to_opt, args_to_fix, alg):
     :return: best_x (dictionary with keys corresponding to args_to_opt strings, values giving parameters corresponding to best_pd), best_pd ("smallest" power density found, W.m-2)
     '''
 
-
     args_to_opt_mod = copy.deepcopy(args_to_opt)
-    if 'mu' in args_to_opt_mod:
-        # if mu is to be optimized, replace ID string with 'mu_frac', and ensure it is last
-        args_to_opt_mod[args_to_opt.index('mu')] = 'mu_frac'
 
     if 'cutoff_angle' in args_to_opt_mod:
         # if cutoff_angle is to be optimized, ensure it is at the end of the list (requirement for pygmo integer limit)
@@ -555,14 +549,6 @@ def get_best_pd(trd_in_environment, args_to_opt, args_to_fix, alg):
 
     x_opt_dict = {}
     for bxi, argo in zip(best_x, args_to_opt_mod):
-        if argo == 'mu_frac':
-            # get Eg
-            try:
-                Eg = args_to_fix['Eg']
-            except:
-                Eg = x_opt_dict['Eg']
-            x_opt_dict.update({'mu':Eg*bxi})
-        else:
-            x_opt_dict.update({argo:bxi})
+        x_opt_dict.update({argo:bxi})
 
     return x_opt_dict, best_pd

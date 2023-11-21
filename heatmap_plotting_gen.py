@@ -11,15 +11,15 @@ fig, axs = plt.subplots(1,1)
 # cutoff_angle = 70
 
 # Eg and mu
-x_id_str = 'mu'
-x_sweep = np.linspace(-0.006,-0.0001,40)
-y_id_str = 'Eg'
-y_sweep = np.linspace(0.0001,0.1,40)
-args_to_opt = []
-arg_fix_extra = {'cutoff_angle':None,'eta_ext':1, 'consider_nonrad':False}
-norm_str = 'mid0'
-x_log = False
-commercial_diode_ref = False
+# x_id_str = 'mu'
+# x_sweep = np.linspace(-0.006,-0.0001,40)
+# y_id_str = 'Eg'
+# y_sweep = np.linspace(0.0001,0.1,40)
+# args_to_opt = []
+# arg_fix_extra = {'cutoff_angle':None,'eta_ext':1, 'consider_nonrad':False}
+# norm_str = 'mid0'
+# x_log = False
+# commercial_diode_ref = False
 
 # Cutoff Angle & Bandgap. Opt over mu
 # x_sweep = np.linspace(10,90,21)
@@ -34,19 +34,19 @@ commercial_diode_ref = False
 # x_log = False
 
 # Rad efficiency & Bandgap. Opt over mu.
-# eta_count = 80
-# # x_sweep = np.linspace(0.01,1, 40)
-# x_sweep = np.logspace(-4,0,num=eta_count,base=10)
-# x_id_str = 'eta_ext'
-# x_log = True
-# Eg_start = 0.02
-# Eg_count = 80
-# y_sweep = np.linspace(Eg_start, 0.3, Eg_count)
-# y_id_str = 'Eg'
-# args_to_opt = ['mu']
-# arg_fix_extra = {'cutoff_angle':None, 'consider_nonrad':True}
-# commercial_diode_ref = True
-# norm_str = 'log power'
+eta_count = 80
+# x_sweep = np.linspace(0.01,1, 40)
+x_sweep = np.logspace(-4,0,num=eta_count,base=10)
+x_id_str = 'eta_ext'
+x_log = True
+Eg_start = 0.02
+Eg_count = 80
+y_sweep = np.linspace(Eg_start, 0.3, Eg_count)
+y_id_str = 'Eg'
+args_to_opt = ['mu']
+arg_fix_extra = {'cutoff_angle':None, 'consider_nonrad':True}
+commercial_diode_ref = True
+norm_str = 'log power'
 
 
 
@@ -55,24 +55,23 @@ alg = pg.scipy_optimize(method='Powell', tol=1e-5)
 
 
 # case_dict = {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o', 'Eg':0.094}
-# case_dict = {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o', 'Eg':0.094}
+case_dict = {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o', 'Eg':0.094}
 # case_dict = {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o', 'Eg':0.1}
 
-# atm_data = atmospheric_dataset_new(case_dict['cwvstring'], location=case_dict['loc'])
-# emitter_planck = planck_law_body(case_dict['Tskin'], atm_data.photon_energies)
-# combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data)
-# case_label = case_dict['loc'] + ' ' + case_dict['cwvstring']
-# filename = f''
-# filename = f'PD_{case_label}_etaextlog_-4_0_{eta_count}_Egs_{Eg_start}_02_{Eg_count}.csv'
+atm_data = atmospheric_dataset_new(case_dict['cwvstring'], location=case_dict['loc'])
+emitter_planck = planck_law_body(case_dict['Tskin'], atm_data.photon_energies)
+combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data)
+case_label = case_dict['loc'] + ' ' + case_dict['cwvstring']
+filename = f'PD_{case_label}_etaextlog_-4_0_{eta_count}_Egs_{Eg_start}_02_{Eg_count}.csv'
 # filename = f'PD_{case_label}_cutoffangle_10_90_21_Egs_{Eg_start}_{Eg_end}_{Eg_count}.csv'
 
 
-Tc, Te = 300, 290
-env = planck_law_body(Te)
-case_label = f'T$_c$ {Tc}K, T$_e$ {Te}K'
-# filename = f'PD_Te3K_Tc300K_etaextlog_-4_0_40_Egs_{Eg_start}_02_40.csv'
-emitter = planck_law_body(Tc)
-combined_trd_env = TRD_in_atmosphere(emitter, env)
+# Tc, Te = 300, 290
+# env = planck_law_body(Te)
+# case_label = f'T$_c$ {Tc}K, T$_e$ {Te}K'
+# # filename = f'PD_Te3K_Tc300K_etaextlog_-4_0_40_Egs_{Eg_start}_02_40.csv'
+# emitter = planck_law_body(Tc)
+# combined_trd_env = TRD_in_atmosphere(emitter, env)
 
 relative_to_etaext1 = False
 
@@ -89,8 +88,6 @@ for y in y_sweep:
         arg_f = {x_id_str:x, y_id_str:y}
         if arg_fix_extra != None:
             arg_f.update(arg_fix_extra)
-        # best_pd = [1]
-        # while best_pd[0] > 0:
 
         if len(args_to_opt) == 0:
             pd = combined_trd_env.power_density(**arg_f)
@@ -100,11 +97,11 @@ for y in y_sweep:
         # print(best_pd[0])
         row += [pd]
     pds_2d += [row]
-#
+
 pds_2d = np.asarray(pds_2d)
-#
+
 # # Save file
-# np.savetxt(filename, pds_2d, delimiter = ',')
+np.savetxt(filename, pds_2d, delimiter = ',')
 
 # Import existing data
 # pds_2d = np.loadtxt(filename, delimiter=',', dtype=float)
@@ -112,13 +109,13 @@ pds_2d = np.asarray(pds_2d)
 
 # Test optimizer
 # alg_opt = pg.scipy_optimize(method='Powell', tol=1e-5)
-alg_opt = pg.de(gen=50, ftol=1e-4)
-
-for i in range(10):
-    opt_xs, opt_pd = get_best_pd(combined_trd_env, args_to_opt=[y_id_str]+args_to_opt+[x_id_str], args_to_fix=arg_fix_extra, alg = alg_opt)
-    plt.plot(opt_xs[x_id_str], opt_xs[y_id_str], 'x', c='black')
-    print(opt_pd[0])
-    print(opt_xs)
+# # alg_opt = pg.de(gen=50, ftol=1e-4)
+#
+# for i in range(10):
+#     opt_xs, opt_pd = get_best_pd(combined_trd_env, args_to_opt=[y_id_str]+args_to_opt+[x_id_str], args_to_fix=arg_fix_extra, alg = alg_opt)
+#     plt.plot(opt_xs[x_id_str], opt_xs[y_id_str], 'x', c='black')
+#     print(opt_pd[0])
+#     print(opt_xs)
 
 
 
@@ -150,7 +147,7 @@ elif norm_str == 'log power':
     min_a = 1e-7#np.min(C_2darray)
     max_a = 3#np.max(C_2darray)
     norm_log = LogNorm(vmin=min_a, vmax=max_a)
-    hmap = h_ax.pcolormesh(x_sweep, y_sweep, C_2darray, cmap='magma', shading='gouraud', norm=norm_log)
+    hmap = h_ax.pcolormesh(x_sweep, y_sweep, C_2darray, cmap='magma', shading='nearest', norm=norm_log)
     add_loglvls = True
 
 else:
