@@ -70,6 +70,19 @@ def add_wl_ticks(ax):
     # secax.minorticks_on()
 
 
+def Eph_to_wn(x):
+    return convert_from(x, units_in = 'photon energy [eV]', units_out = 'wavenumber [cm-1]')
+
+def wn_to_Ephs(x):
+    return convert_from(x, units_in='wavenumber [cm-1]', units_out='photon energy [eV]')
+
+def add_wn_ticks(ax):
+    secax = ax.secondary_xaxis('top', functions=(Eph_to_wn, wn_to_Ephs))
+    secax.set_xlabel('Wavenumber, $\\tilde{v}$ [cm$^{-1}$]')
+    ax.minorticks_on()
+    secax.minorticks_on()
+
+
 def Ndot_boltzmann(Eg, T, mu): # particle flux density
     # accurate for large band gaps / large negative bias
     kT = kb*T/q # convert to eV to match units of Eg

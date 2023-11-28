@@ -82,7 +82,7 @@ dwn_flux_yaxs = axs[0].twinx()
 dwn_flux_yaxs.plot(ref_dataset.photon_energies, downwelling_photflux, c='lightgrey')
 dwn_flux_yaxs.set_ylabel('Spectral Photon Flux Density, $\mathrm{F_{ph} \; [s^{-1}.m^{-2}/eV]}$', color='lightgrey')
 dwn_flux_yaxs.tick_params(axis='y', labelcolor='lightgrey')
-dwn_flux_yaxs.text(s='Telfer low', x=0.09, y=0.5 * 1e23, ha='right', color='lightgrey')
+# dwn_flux_yaxs.text(s='Telfer low', x=0.09, y=0.5 * 1e23, ha='right', color='lightgrey')
 dwn_flux_yaxs.set_yscale('log')
 
 for sample_dct in comparison_lst:

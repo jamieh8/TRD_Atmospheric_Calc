@@ -45,13 +45,13 @@ comparison_lst = []
 angle_array = [0]
 Egs_AD = np.arange(0.0125, 0.3, 0.002)
 datasets = [
-    # {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
-    # {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
-    # {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
+    {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
+    {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
+    {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
 
-    {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
-    {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
-    {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
+    # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
+    # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
+    # {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
     #
     # {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
     # {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
@@ -88,6 +88,10 @@ for ds in datasets:
 #                          'cutoff angle':None, 'use diffusivity approx':True, 'Egs':Egs_AD}]
 
 
+# BBs at T skin
+Tsets = []
+for ds in datasets:
+    Tsets += [{'Tc':ds['Tskin'], 'colour':ds['color']}]
 
 # comparing blackbody environments
 # Ephs = np.arange(1e-6, 0.31, 0.0001)
@@ -97,17 +101,18 @@ for ds in datasets:
 # Tsets = [{'Tc':200, 'colour':'navy'}, {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
 #
 # # effective temperatures
-# # for dataset_entry in comparison_lst:
-# #     Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(300)
-# #     Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
-#
-# for Ts in Tsets:
-#     Tc = Ts['Tc']
-#     bb_env = planck_law_body(Tc, Ephs)
-#     line_format_dct = {'color': Ts['colour'], 'linestyle': 'dashed'}
-#     comparison_lst += [{'label': 'T$_\mathrm{atm}$ = '+f'{Tc:.5g}K', 'line format':line_format_dct,
-#                         'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
-#                         'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
+for dataset_entry in comparison_lst:
+    Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(300)
+    Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
+
+
+for Ts in Tsets:
+    Tc = Ts['Tc']
+    bb_env = planck_law_body(Tc, Ephs)
+    line_format_dct = {'color': Ts['colour'], 'linestyle': 'dashed'}
+    comparison_lst += [{'label': 'T$_\mathrm{atm}$ = '+f'{Tc:.5g}K', 'line format':line_format_dct,
+                        'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
+                        'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
 #
 # comparison_lst[-1].update({'label position':'below'})  # required for Tatm Telfer high, to accomodate Telfer mid
 
@@ -122,12 +127,13 @@ for ds in datasets:
 custom_muopt_legend = []
 
 log_atmdat = True
-include_photflux_plots = True
+
+include_photflux_plots = False
 include_Ndot_diff = False
 include_heaviside_ex = False
 
-include_muopt_plots = False
-opt_Eg_and_mu = True  # adds points at optimal Eg
+include_muopt_plots = True
+opt_Eg_and_mu = False  # adds points at optimal Eg
 log_power = True
 atmdat_background = True
 use_cust_legend = False
@@ -135,7 +141,7 @@ use_cust_legend = False
 include_Eg_PD_scatter = False
 
 
-secondary_ticks = 'wavelength'
+secondary_ticks = 'wavenumber'
 
 
 alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
