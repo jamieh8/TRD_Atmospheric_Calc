@@ -15,21 +15,9 @@ comparison_lst = []
 # comparing new datasets:
 angle_array = [0]
 Egs_AD = np.arange(0.0125, 0.3, 0.002)
-datasets = [
-    {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
+datasets_telfer = get_dataset_list()[0:3]
 
-    # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
-    # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
-    # {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
-    #
-    # {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
-    # {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
-    # {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
-    ]
-
-for ds in datasets:
+for ds in datasets_telfer:
     cwv_str = ds['cwvstring']
     loc_str = ds['loc']
     atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
@@ -67,7 +55,7 @@ custom_muopt_legend = [Line2D([0],[0], color = 'k', linestyle='solid', label='LB
                        Line2D([0],[0], color = 'k', linestyle='dashed', label='Effective temperature'),
                        Patch(facecolor='darkorange', label='Telfer low'),
                        Patch(facecolor='darkviolet', label='Telfer mid'),
-                       Patch(facecolor='teal', label='Telfer high'),
+                       Patch(facecolor='mediumseagreen', label='Telfer high'),
                        Patch(facecolor='black', label='3K BB')]
 
 alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
@@ -134,21 +122,10 @@ axs_scatter = axs[1]
 scatter_lst = []
 angle_array = [0]
 Egs_AD = np.arange(0.0125, 0.3, 0.002)
-datasets = [
-    {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
 
-    {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
-    {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
-    {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
-    #
-    {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
-    {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
-    {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
-    ]
+datasets_all = get_dataset_list()
 
-for ds in datasets:
+for ds in datasets_all:
     cwv_str = ds['cwvstring']
     loc_str = ds['loc']
     atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)

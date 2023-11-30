@@ -1,19 +1,7 @@
 from TRD_Atmospheric_Functions import *
 import matplotlib.pyplot as plt
 
-datasets = [
-    {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
-
-    # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
-    # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
-    # {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
-
-    # {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
-    # {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
-    # {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
-    ]
+datasets = get_dataset_list()[0:3]
 
 fig = plt.figure()
 gs1 = fig.add_gridspec(2, 3, width_ratios=[2,2,3], wspace=0.5, hspace=0.5)
@@ -37,7 +25,7 @@ vert_line_dicts = [
 
     {'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'ls':'solid', 'symbol':'o'},
     {'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','ls':'solid', 'symbol':'o'},
-    {'tcwv':70.51, 'Tskin':299.86, 'color':'teal','ls':'solid', 'symbol':'o'},
+    {'tcwv':70.51, 'Tskin':299.86, 'color':'mediumseagreen','ls':'solid', 'symbol':'o'},
 
     {'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'ls':'dashed', 'symbol':'^'},
     {'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'ls':'dashed', 'symbol':'^'},
