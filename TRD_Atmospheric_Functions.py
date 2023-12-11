@@ -132,7 +132,7 @@ class atmospheric_dataset:
 
         return ds
 
-    def __init__(self, cwv):
+    def __init__(self, cwv, Tskin=300, spectral_fill_type='none'):
         '''
         Loads in file as an xarray, with all original data values (i.e. no unit conversion), on initialization.
         Calculate wavenumbers, wavelengths, and photon_energies. Save resulting 1D arrays as class properties.
@@ -144,6 +144,9 @@ class atmospheric_dataset:
         self.wavelengths = convert_from(self.wavenumbers, units_in='wavenumber [cm-1]', units_out='wavelength [um]')
         self.photon_energies = convert_from(self.wavenumbers, units_in='wavenumber [cm-1]', units_out='photon energy [eV]')
         self.Ndot_dict = {}
+
+        self.Tskin = Tskin
+        self.spectral_fill_type = spectral_fill_type
 
     def retrieve_spectral_array(self, yvals = 'W.m-2', xvals = 'eV', col_name = 'downwelling_flux'):
         '''
@@ -329,6 +332,7 @@ class atmospheric_dataset:
         spectral_photon_flux = 2 * np.pi *  integral_over_theta  # [s-1.m-2.rad-1/eV]*[rad]
         return spectral_photon_flux  # [s-1.m-2/eV]
 
+
     def Lph_costheta_sintheta(self, theta_deg, idx_Eph):
         theta = np.radians(theta_deg)
 
@@ -350,6 +354,26 @@ class atmospheric_dataset:
 
         return L_costheta * np.sin(theta)
 
+
+    def fill_in_downwelling(self):
+        Ephs_sofar = self.photon_energies
+        Fph_sofar = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
+        if self.spectral_fill_type == 'none':
+            Ephs_after, Fph_after = [], []
+        else:
+            Ephs_after = np.arange(0.31 + 6.2 * 1e-5, 1, 6.2 * 1e-5)
+
+            planck_filler = planck_law_body(T=self.Tskin)
+            Fph_after = planck_filler.spectral_photon_flux(Eph=Ephs_after, mu=0, cutoff_angle=90)
+
+            # from Helen: "moderately" transmissive window from 0.32 - 0.36 eV
+            if self.spectral_fill_type == 'low':
+                correction_fac = 0.95 * np.heaviside(Ephs_after - 0.37, 0.5) + 0.05  # is 1 if Eph > 0.37 eV, 0.8 if < 0.37 eV
+                Fph_after *= correction_fac
+
+        return {'Ephs': np.append(Ephs_sofar, Ephs_after), 'Fphs': np.append(Fph_sofar, Fph_after)}
+
+
     def retrieve_Ndot_heaviside(self, Eg, cutoff_angle):
         key = f'Eg{Eg}_cutoff{cutoff_angle}'
         if key in self.Ndot_dict.keys():
@@ -358,7 +382,11 @@ class atmospheric_dataset:
             Ephs = self.photon_energies
             if cutoff_angle == None:
                 # if cutoff_angle is None, use the diffusivity approximation
-                spec_phot_flux = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
+                if self.spectral_fill_type == 'none':
+                    spec_phot_flux = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
+                else:
+                    filled_arrays = self.fill_in_downwelling()
+                    spec_phot_flux, Ephs = filled_arrays['Fphs'], filled_arrays['Ephs']
                 spec_pf_heavisided = spec_phot_flux * np.heaviside(Ephs - Eg, 0.5)
             else:
                 # spec_pf_heavisided = []
@@ -371,10 +399,9 @@ class atmospheric_dataset:
                 # spec_pf_heavisided = np.array(spec_pf_heavisided)
 
                 # if cutoff angle is given, perform integral over interpolated angles
-                angle_array = np.arange(0,90.5,0.1)
+                angle_array = np.arange(0,90.1,0.1)
                 spec_phot_flux = self.spectral_PDF_with_cutoffangle(angle_array, cutoff_angle)
                 spec_pf_heavisided = spec_phot_flux*np.heaviside(Ephs - Eg, 0.5)
-
 
             int_over_Eph = np.trapz(spec_pf_heavisided, Ephs)
 
@@ -384,9 +411,9 @@ class atmospheric_dataset:
 
 
 class atmospheric_dataset_new(atmospheric_dataset):
-    def __init__(self, cwv, location):
+    def __init__(self, cwv, location, Tskin, spectral_fill_type='none'):
         self.location = location
-        super().__init__(cwv)
+        super().__init__(cwv, Tskin, spectral_fill_type)
 
     def load_file_as_xarray(self, cwv):
         filename = os.path.join('simulations_24oct', f'{self.location}_{cwv}.txt')
@@ -452,7 +479,7 @@ class planck_law_body:
         '''
         return self.spectral_photon_flux(Eph, mu, cutoff_angle) * q * Eph  # [s-1.m-2/eV]*[J/eV]*[eV]
 
-    def retrieve_Ndot_heaviside(self, Eg, cutoff_angle=90, mu=0, int_method='trapz'):
+    def retrieve_Ndot_heaviside(self, Eg, cutoff_angle=90, mu=0, int_method='quad'):
         '''
         :param Eg: Bandgap, in [eV]
         :param mu: Fermi level split, in [eV]
@@ -472,7 +499,7 @@ class planck_law_body:
 
         else:
             # ... not using pre-sampled Ephs (for more accuracy)
-            integral_over_Eph = integrate.quad(self.spectral_photon_flux, a=Eg,b=2,args=(mu, cutoff_angle))
+            integral_over_Eph = integrate.quad(self.spectral_photon_flux, a=Eg, b=1, args=(mu, cutoff_angle))
             Ndot = integral_over_Eph[0]
             # print(integral_over_Eph)
 
@@ -480,12 +507,13 @@ class planck_law_body:
 
 
 class TRD_in_atmosphere:
-    def __init__(self, TRD_body, atmosphere):
+    def __init__(self, TRD_body, atmosphere, out_int_method = 'quad'):
         self.TRD_body = TRD_body
         self.atm = atmosphere
+        self.out_int_method = out_int_method
 
     def current_density(self, mu, Eg, cutoff_angle, eta_ext=1, consider_nonrad = False):
-        Ndot_out = self.TRD_body.retrieve_Ndot_heaviside(Eg = Eg, mu = mu, cutoff_angle = cutoff_angle)
+        Ndot_out = self.TRD_body.retrieve_Ndot_heaviside(Eg = Eg, mu = mu, cutoff_angle = cutoff_angle, int_method=self.out_int_method)
         Ndot_in = self.atm.retrieve_Ndot_heaviside(Eg = Eg, cutoff_angle = cutoff_angle)
 
         if consider_nonrad:
