@@ -1,17 +1,86 @@
 from TRD_Atmospheric_Functions import *
 import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+
+def retrieve_dat(month):
+    folder = r'C:\Users\z5426944\OneDrive - UNSW\Documents\Thermoradiative Diode\Mean tcwv data from Helen'
+    filename = f'{month}_0000UTC_mean.dat'
+
+    dat_array = np.loadtxt(os.path.join(folder, filename))
+    dat_array = dat_array.flatten()
+    dat_array = dat_array.reshape((721,1440))
+    dat_array_spliced = np.append(dat_array[:,720:], dat_array[:,0:720], axis=1)
+
+    return dat_array_spliced
+
+def add_location_annots(ax):
+    annots = [{'label':'Tamanrasset', 'coords':(5.5,22.75), 'offset':(-10,30), 'textcoords':(8,55),'symbol':'^', 'textalign':{'ha':'left', 'va':'center'}},
+              {'label':'California', 'coords':(-120,34), 'offset':(0, 30), 'textcoords':(-102,64),'symbol':'s', 'textalign':{'ha':'left', 'va':'center'}},
+              {'label':'Telfer', 'coords':(122.25, -21.75), 'offset':(-20,-20), 'textcoords':(90,-50),'symbol':'o', 'textalign':{'ha':'right', 'va':'center'}}]
+    for annot in annots:
+        offset_coords = (annot['coords'][0]+annot['offset'][0], annot['coords'][1]+annot['offset'][1])
+        ax.annotate(' ', xy=annot['coords'], xytext=offset_coords, ha='center', va='center', color='black', arrowprops={'arrowstyle':'->', 'color':'red', 'linewidth':2})
+        ax.plot(offset_coords[0], offset_coords[1], marker=annot['symbol'], c='white', markersize=15, mec='red', mew=2)
+        ax.text(x=annot['textcoords'][0],y=annot['textcoords'][1], s=annot['label'], **annot['textalign'], bbox = {'color':'white', 'pad':0.4})
+
 
 datasets = get_dataset_list()[0:3]
 
-fig = plt.figure()
-gs1 = fig.add_gridspec(2, 3, width_ratios=[2,2,3], wspace=0.5, hspace=0.5)
+fig = plt.figure(figsize=(15,7))
+gsmap = fig.add_gridspec(2, 3, width_ratios=[3,2,4], hspace=0.1, wspace=0.3)
 # gs2 = fig.add_gridspec(1, 3, width_ratios=[5,1,2], wspace=0.05)
 
-ax_latmap = fig.add_subplot(gs1[:,0])
+ax_mapjan = fig.add_subplot(gsmap[0,0], projection=ccrs.PlateCarree())
+ax_mapjune = fig.add_subplot(gsmap[1,0], projection=ccrs.PlateCarree())
+map_axs = [ax_mapjan, ax_mapjune]
+
+
+
+# TCWV map
+jan_dat = retrieve_dat('jan')
+june_dat = retrieve_dat('jun')
+
+longs = np.arange(-180, 180, 0.25)
+lats = np.arange(90, -90.25, -0.25)
+
+contours = np.arange(0,66+6,6)
+
+for i, dat in enumerate([jan_dat, june_dat]):
+    map_ax = map_axs[i]
+    map_ax.coastlines()
+
+    hmap = map_ax.contourf(longs, lats, dat,  levels=contours, cmap='rainbow')
+
+    map_ax.set_xticks(np.arange(-180, 180.1, 20))
+    map_ax.set_yticks(np.arange(-80, 80.1, 20))
+    map_ax.grid(c='white', lw=0.4)
+
+    map_ax.set_xticklabels([])
+    map_ax.set_yticklabels([])
+    map_ax.xaxis.set_ticks_position('none')
+    map_ax.yaxis.set_ticks_position('none')
+
+    map_ax.set_aspect('auto')
+
+add_location_annots(map_axs[0])
+map_axs[0].text(x=-180+5,y=-90+3,s='JAN 0000 UTC', ha='left', va='bottom', color='white', bbox = {'color':'black', 'pad':1})
+map_axs[1].text(x=-180+5,y=-90+3,s='JUNE 0000 UTC', ha='left', va='bottom', color='white', bbox = {'color':'black', 'pad':1})
+
+fig.subplots_adjust(left=0.05, right=0.95, bottom=0.15, top=0.9)
+cb_ax = fig.add_axes([0.05, 0.1, 0.25, 0.02])  # x0, y0, width, height
+
+cbar = fig.colorbar(hmap, cax=cb_ax, orientation='horizontal')
+cbar.ax.set_xlabel('Decadal mean TCWV [mm]', fontsize=10)
+cbar.ax.set_xticks(contours)
+cbar.ax.set_xlim([0, 66])
+
+
+# add rest of subplots
+gs1 = fig.add_gridspec(2, 3, width_ratios=[3,2,4], wspace=0.3, hspace=0.5)
 ax_hist = fig.add_subplot(gs1[0,1])
 ax_scatter = fig.add_subplot(gs1[1,1])
 ax_dwf = fig.add_subplot(gs1[:,2])
-axs = [ax_latmap, ax_hist, ax_scatter, ax_dwf]
+axs = [ax_hist, ax_scatter, ax_dwf]
 
 # Histogram and scatter plot
 copied_data = np.loadtxt('histogram-plot-data.csv', skiprows=1, delimiter=',')
@@ -47,12 +116,15 @@ for line_dict in vert_line_dicts:
 
 ax_scatter.set_xlabel('TCWV [mm]')
 ax_scatter.set_ylabel('Skin Temp [K]')
+ax_scatter.set_xlim([0,75])
+ax_scatter.set_ylim([275, 310])
 ax_scatter.minorticks_on()
 ax_scatter.grid()
 
 ax_hist.set_xlabel('TCWV [mm]')
 ax_hist.set_ylabel('Occurence [%]')
 ax_hist.set_ylim([0,4])
+ax_hist.set_xlim([0,75])
 
 
 
@@ -60,7 +132,7 @@ ax_hist.set_ylim([0,4])
 for ds in datasets:
     cwv_str = ds['cwvstring']
     loc_str = ds['loc']
-    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
+    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str, Tskin=ds['Tskin'])
     Ephs = atm_data.photon_energies
     downwelling_ph_fl = atm_data.retrieve_spectral_array(yvals='W.cm-2', xvals='cm-1')
     ax_dwf.plot(Ephs, downwelling_ph_fl, c=ds['color'], label=f'{loc_str.capitalize()} {cwv_str}')
@@ -76,7 +148,8 @@ ax_dwf.set_yscale('log')
 add_wl_ticks(ax_dwf)
 # add_wn_ticks(ax)
 
-for letter, ax in zip(['a','b','c','d'], axs):
+map_axs[0]. set_title('a)', loc='left', fontsize=15, fontweight='bold', y=1.05, x=-0.1)
+for letter, ax in zip(['b','c','d'], axs):
     ax.set_title(letter+')', loc='left', fontsize=15, fontweight='bold', y=1.05, x=-0.1)
 
 plt.show()
