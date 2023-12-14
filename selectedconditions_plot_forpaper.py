@@ -53,7 +53,7 @@ for i, dat in enumerate([jan_dat, june_dat]):
 
     map_ax.set_xticks(np.arange(-180, 180.1, 20))
     map_ax.set_yticks(np.arange(-80, 80.1, 20))
-    map_ax.grid(c='white', lw=0.4)
+    map_ax.grid(c='white', lw=0.2)
 
     map_ax.set_xticklabels([])
     map_ax.set_yticklabels([])

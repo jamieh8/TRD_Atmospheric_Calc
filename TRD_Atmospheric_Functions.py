@@ -358,11 +358,10 @@ class atmospheric_dataset:
     def fill_in_downwelling(self):
         Ephs_sofar = self.photon_energies
         Fph_sofar = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
+        Ephs_after = np.arange(0.31 + 6.2 * 1e-5, 1, 6.2 * 1e-5)
         if self.spectral_fill_type == 'none':
-            Ephs_after, Fph_after = [], []
+            Fph_after = np.zeros(len(Ephs_after))
         else:
-            Ephs_after = np.arange(0.31 + 6.2 * 1e-5, 1, 6.2 * 1e-5)
-
             planck_filler = planck_law_body(T=self.Tskin)
             Fph_after = planck_filler.spectral_photon_flux(Eph=Ephs_after, mu=0, cutoff_angle=90)
 
@@ -435,6 +434,24 @@ class atmospheric_dataset_new(atmospheric_dataset):
         ds = xr.DataArray(data[:, 1:], coords={'wavenumber': data[:, 0],
                                                'column': column_labels[1:]}, dims=['wavenumber', 'column'])
         return ds
+
+class atmospheric_dataset_inttest(atmospheric_dataset_new):
+    def __init__(self, cwv, location, Tskin, spectral_fill_type='none', max_Eph_fill = 1):
+        self.max_Eph_fill = max_Eph_fill
+        super().__init__(cwv, location, Tskin, spectral_fill_type)
+
+    def fill_in_downwelling(self):
+        Ephs_sofar = self.photon_energies
+        Fph_sofar = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
+        Ephs_after = np.arange(0.31 + 6.2*1e-5, 1, 6.2*1e-5)
+        if self.spectral_fill_type == 'none':
+            Fph_after = np.zeros(len(Ephs_after))
+        else:
+            planck_filler = planck_law_body(T=self.Tskin)
+            Fph_after = planck_filler.spectral_photon_flux(Eph=Ephs_after, mu=0, cutoff_angle=90)
+            Fph_after *= np.heaviside(self.max_Eph_fill - Ephs_after, 0.5)
+
+        return {'Ephs': np.append(Ephs_sofar, Ephs_after), 'Fphs': np.append(Fph_sofar, Fph_after)}
 
 class planck_law_body:
     def __init__(self, T=300, Ephs=np.arange(1e-6, 0.31, 0.0001)):
