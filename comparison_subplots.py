@@ -46,8 +46,8 @@ angle_array = [0]
 Egs_AD = np.arange(0.0125, 0.3, 0.002)
 datasets = [
     {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
+    # {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
+    # {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
 
     # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
     # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
@@ -61,7 +61,7 @@ datasets = [
 for ds in datasets:
     cwv_str = ds['cwvstring']
     loc_str = ds['loc']
-    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
+    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str, Tskin=ds['Tskin'])
     Ephs = atm_data.photon_energies
     line_format_dct = {'color': ds['color'], 'linestyle': 'solid'}
     scatter_format = {'c': ds['color'], 'marker': ds['symbol'], 'markersize':8}
@@ -101,18 +101,18 @@ for ds in datasets:
 # Tsets = [{'Tc':200, 'colour':'navy'}, {'Tc':270, 'colour':'blueviolet'}, {'Tc':290, 'colour':'mediumorchid'}]
 #
 # # effective temperatures
-for dataset_entry in comparison_lst:
-    Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(300)
-    Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
-
-
-for Ts in Tsets:
-    Tc = Ts['Tc']
-    bb_env = planck_law_body(Tc, Ephs)
-    line_format_dct = {'color': Ts['colour'], 'linestyle': 'dashed'}
-    comparison_lst += [{'label': 'T$_\mathrm{atm}$ = '+f'{Tc:.5g}K', 'line format':line_format_dct,
-                        'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
-                        'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
+# for dataset_entry in comparison_lst:
+#     Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(300)
+#     Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
+#
+#
+# for Ts in Tsets:
+#     Tc = Ts['Tc']
+#     bb_env = planck_law_body(Tc, Ephs)
+#     line_format_dct = {'color': Ts['colour'], 'linestyle': 'dashed'}
+#     comparison_lst += [{'label': 'T$_\mathrm{atm}$ = '+f'{Tc:.5g}K', 'line format':line_format_dct,
+#                         'atmospheric dataset': bb_env, 'emitter body': emitter_planck_300,
+#                         'cutoff angle': None, 'use diffusivity approx': True, 'Egs':Egs_bb}]
 #
 # comparison_lst[-1].update({'label position':'below'})  # required for Tatm Telfer high, to accomodate Telfer mid
 
@@ -128,11 +128,12 @@ custom_muopt_legend = []
 
 log_atmdat = True
 
-include_photflux_plots = False
+include_photflux_plots = True
 include_Ndot_diff = False
-include_heaviside_ex = False
+include_heaviside_ex = True
+Eg_ex = 0.25
 
-include_muopt_plots = True
+include_muopt_plots = False
 opt_Eg_and_mu = False  # adds points at optimal Eg
 log_power = True
 atmdat_background = True
@@ -156,7 +157,7 @@ if include_muopt_plots:
     fig_Popt, axs_Popt = plt.subplots(1,2, layout='tight')
 
     if atmdat_background:
-        ref_dataset = atmospheric_dataset_new('low', 'telfer')
+        ref_dataset = atmospheric_dataset_new('low', 'telfer', 301.56)
         downwelling_photflux = ref_dataset.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV',
                                                                    col_name='downwelling_flux')
         dwn_flux_yaxs = axs_Popt[0].twinx()
@@ -168,7 +169,7 @@ if include_muopt_plots:
             dwn_flux_yaxs.set_yscale('log')
 
 if include_Eg_PD_scatter:
-    fig_scatter, axs_scatter = plt.subplots(1,1, layout='tight')
+    fig_scatter, axs_scatter = plt.subplots(1, 1, layout='tight')
 
 for sample_dct in comparison_lst:
     atm_data = sample_dct['atmospheric dataset']
@@ -208,7 +209,6 @@ for sample_dct in comparison_lst:
             axs_Ndotd.plot(Egs, Ndot_out-Ndot_in, label=sample_dct['label'], **style_args)
 
         if include_heaviside_ex:
-            Eg_ex = 0.08
             # shade area under spectral PDF that would be integrated
             axs_pf[0][0].fill_between(Ephs, spec_phot_flux_out*np.heaviside(Ephs-Eg_ex,1), **style_args, alpha=0.2)
             axs_pf[1][0].fill_between(Ephs, spectral_photon_flux*np.heaviside(Ephs-Eg_ex,1), **style_args, alpha=0.2)
@@ -275,7 +275,6 @@ if include_photflux_plots:
     #         axs_pf[ri][ci].set_ylim([0,ylim_max])
 
     # add heaviside demo
-    Eg = 0.08  # [eV]
     first_plt_dct = comparison_lst[0]
 
     axs_pf[0][0].legend()
@@ -295,6 +294,8 @@ if include_photflux_plots:
     for Ndot_ax in [axs_pf[0][1], axs_pf[1][1]]:
         Ndot_ax.set_ylabel('Photon Flux Density, $\mathrm{\dot{N} \;[s^{-1}.m^{-2}]}$')
         Ndot_ax.set_xlabel('Bandgap, E$_\mathrm{g}$ [eV]')
+        if log_atmdat:
+            Ndot_ax.set_yscale('log')
 
         # secax = Ndot_ax.secondary_xaxis('top', functions=(Eph_to_v, v_to_Ephs))
         # secax.set_xlabel('Wavenumber, $\\tilde{v}$ [cm$^{-1}$]')
@@ -302,7 +303,7 @@ if include_photflux_plots:
     for pf_ax in axs_pf.flatten():
         pf_ax.minorticks_on()
         pf_ax.yaxis.set_tick_params(which='minor', bottom=False)  # turn off minor ticks for y axis
-        add_wl_ticks(pf_ax)
+        add_wn_ticks(pf_ax)
         og_ylim = pf_ax.get_ylim()
         pf_ax.set_ylim([0,og_ylim[1]])
 
