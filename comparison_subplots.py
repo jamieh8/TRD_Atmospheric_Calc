@@ -46,8 +46,8 @@ angle_array = [0]
 Egs_AD = np.arange(0.0125, 0.3, 0.002)
 datasets = [
     {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
-    # {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
-    # {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
+    {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
+    {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
 
     # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
     # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
@@ -61,7 +61,7 @@ datasets = [
 for ds in datasets:
     cwv_str = ds['cwvstring']
     loc_str = ds['loc']
-    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str, Tskin=ds['Tskin'])
+    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str, Tskin=ds['Tskin'], date='23dec')
     Ephs = atm_data.photon_energies
     line_format_dct = {'color': ds['color'], 'linestyle': 'solid'}
     scatter_format = {'c': ds['color'], 'marker': ds['symbol'], 'markersize':8}
@@ -130,10 +130,10 @@ log_atmdat = True
 
 include_photflux_plots = True
 include_Ndot_diff = False
-include_heaviside_ex = True
+include_heaviside_ex = False
 Eg_ex = 0.25
 
-include_muopt_plots = False
+include_muopt_plots = True
 opt_Eg_and_mu = False  # adds points at optimal Eg
 log_power = True
 atmdat_background = True

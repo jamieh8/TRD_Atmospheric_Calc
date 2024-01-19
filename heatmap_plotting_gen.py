@@ -50,7 +50,7 @@ norm_str = 'log power'
 
 
 
-alg = pg.scipy_optimize(method='Powell', tol=1e-5)
+alg = pg.scipy_optimize(method='Powell', tol=1e-7)
 # alg = pg.de(gen=50, ftol=1e-5)
 
 
@@ -58,7 +58,7 @@ alg = pg.scipy_optimize(method='Powell', tol=1e-5)
 case_dict = {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o', 'Eg':0.094}
 # case_dict = {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o', 'Eg':0.1}
 
-atm_data = atmospheric_dataset_new(case_dict['cwvstring'], location=case_dict['loc'])
+atm_data = atmospheric_dataset_new(case_dict['cwvstring'], location=case_dict['loc'], Tskin=case_dict['Tskin'], date='23dec')
 emitter_planck = planck_law_body(case_dict['Tskin'], atm_data.photon_energies)
 combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data)
 case_label = case_dict['loc'] + ' ' + case_dict['cwvstring']

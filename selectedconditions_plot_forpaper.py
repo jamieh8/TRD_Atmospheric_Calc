@@ -15,7 +15,7 @@ def retrieve_dat(month):
 
 def add_location_annots(ax):
     annots = [{'label':'Tamanrasset', 'coords':(5.5,22.75), 'offset':(-10,30), 'textcoords':(8,55),'symbol':'^', 'textalign':{'ha':'left', 'va':'center'}},
-              {'label':'California', 'coords':(-120,34), 'offset':(0, 30), 'textcoords':(-102,64),'symbol':'s', 'textalign':{'ha':'left', 'va':'center'}},
+              {'label':'California', 'coords':(-120,36.75), 'offset':(0, 30), 'textcoords':(-102,64),'symbol':'s', 'textalign':{'ha':'left', 'va':'center'}},
               {'label':'Telfer', 'coords':(122.25, -21.75), 'offset':(-20,-20), 'textcoords':(90,-50),'symbol':'o', 'textalign':{'ha':'right', 'va':'center'}}]
     for annot in annots:
         offset_coords = (annot['coords'][0]+annot['offset'][0], annot['coords'][1]+annot['offset'][1])
@@ -132,7 +132,7 @@ ax_hist.set_xlim([0,75])
 for ds in datasets:
     cwv_str = ds['cwvstring']
     loc_str = ds['loc']
-    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str, Tskin=ds['Tskin'])
+    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str, Tskin=ds['Tskin'], date='23dec')
     Ephs = atm_data.photon_energies
     downwelling_ph_fl = atm_data.retrieve_spectral_array(yvals='W.cm-2', xvals='cm-1')
     ax_dwf.plot(Ephs, downwelling_ph_fl, c=ds['color'], label=f'{loc_str.capitalize()} {cwv_str}')
@@ -141,8 +141,8 @@ ax_dwf.set_ylabel('Spectral Photon Flux Density, F$_\mathrm{ph}$ [s$^{-1}$.m$^{-
 # ax.set_ylabel('Spectral Irradiance, F$_e$ [W.cm$^{-2}$/cm$^{-1}$]')
 ax_dwf.set_xlabel('Photon Energy, E$_\mathrm{ph}$ [eV]')
 ax_dwf.legend(loc='lower left')
-# ax.set_xlim([0,0.31])
-# ax.set_ylim([0,5*1e23])
+ax_dwf.set_xlim([0.01, 0.31])
+ax_dwf.set_ylim([1e-8, 1e-4])
 ax_dwf.set_yscale('log')
 
 add_wl_ticks(ax_dwf)

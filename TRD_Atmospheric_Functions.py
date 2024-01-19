@@ -358,7 +358,7 @@ class atmospheric_dataset:
     def fill_in_downwelling(self):
         Ephs_sofar = self.photon_energies
         Fph_sofar = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
-        Ephs_after = np.arange(0.31 + 6.2 * 1e-5, 1, 6.2 * 1e-5)
+        Ephs_after = np.arange(Ephs_sofar[-1] + 6.2 * 1e-5, 1, 6.2 * 1e-5)
         if self.spectral_fill_type == 'none':
             Fph_after = np.zeros(len(Ephs_after))
         else:
@@ -410,17 +410,18 @@ class atmospheric_dataset:
 
 
 class atmospheric_dataset_new(atmospheric_dataset):
-    def __init__(self, cwv, location, Tskin, spectral_fill_type='none'):
+    def __init__(self, cwv, location, Tskin, spectral_fill_type='none', date='24oct'):
         self.location = location
+        self.date = date
         super().__init__(cwv, Tskin, spectral_fill_type)
 
-    def load_file_as_xarray(self, cwv):
-        filename = os.path.join('simulations_24oct', f'{self.location}_{cwv}.txt')
+    def load_file_as_xarray(self, cwv, extended=False):
+        filename = os.path.join(f'simulations_{self.date}', f'{self.location}_{cwv}.txt')
         data = np.loadtxt(filename)
 
         # make an xarray to add headings etc.
         column_labels = ['wavenumber']  # cm-1, centre point of bin. 0.5 cm-1 steps
-        if self.location=='telfer':
+        if self.location=='telfer' and self.date=='24oct':
             zenith_angles = [0,10,20,30,40,53,60,65,70,75,80,85]
         else:
             zenith_angles = [0,53,70]

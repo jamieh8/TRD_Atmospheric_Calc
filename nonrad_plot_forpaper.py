@@ -30,7 +30,7 @@ alg = pg.scipy_optimize(method='Powell', tol=1e-5)
 case_dict = {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o', 'Eg':0.094}
 # {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o', 'Eg':0.1}
 
-atm_data = atmospheric_dataset_new(case_dict['cwvstring'], location=case_dict['loc'])
+atm_data = atmospheric_dataset_new(case_dict['cwvstring'], location=case_dict['loc'], Tskin=case_dict['Tskin'], date='23dec')
 case_label = case_dict['loc'] + ' ' + case_dict['cwvstring']
 filename = f'PD_{case_label}_etaextlog_-4_0_{eta_count}_Egs_{Eg_start}_02_{Eg_count}.csv'
 # filename = f'PD_{case_label}_cutoffangle_10_90_21_Egs_{Eg_start}_{Eg_end}_{Eg_count}.csv'
@@ -60,7 +60,7 @@ datasets = get_dataset_list()
 for ds in datasets:
     cwv_str = ds['cwvstring']
     loc_str = ds['loc']
-    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
+    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str, Tskin=ds['Tskin'], date='23dec')
     Ephs = atm_data.photon_energies
     line_format_dct = {'color': ds['color'], 'linestyle': 'solid'}
     scatter_format = {'c': ds['color'], 'marker': ds['symbol'], 'markersize':8}
@@ -82,7 +82,7 @@ alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
 
 
 # fig, axs = plt.subplots(1,3,layout='tight', sharey=False, width_ratios=[4,1,2])
-fig = plt.figure()
+fig = plt.figure(figsize=(15,6))
 
 gs1 = fig.add_gridspec(1, 3, width_ratios=[5,1,2], wspace=0.5)
 gs2 = fig.add_gridspec(1, 3, width_ratios=[5,1,2], wspace=0.05)
@@ -148,7 +148,9 @@ h_ax.set_ylabel('Bandgap, E$_\mathrm{g}$ [eV]')
 h_ax.set_xlim([x_sweep[0], x_sweep[-1]])
 
 
-diodes = [{'Eg':0.094, 'eta':1, 'styleargs':{}}, {'Eg':0.094, 'eta':0.01, 'styleargs':{'fillstyle':'right'}}, {'Eg':0.25, 'eta':0.1, 'styleargs':{'mfc':'none', 'mew':1.5}}]
+diodes = [{'id':'A', 'Eg':0.094, 'eta':1, 'styleargs':{}},
+          {'id':'B','Eg':0.094, 'eta':0.01, 'styleargs':{'fillstyle':'right'}},
+          {'id':'C','Eg':0.25, 'eta':0.1, 'styleargs':{'mfc':'none', 'mew':1.5}}]
 ax_scatter = axs[1]
 for diode in diodes:
     for case in comparison_lst:
@@ -167,7 +169,7 @@ ax_scatter.set_xlabel('TCWV [mm]')
 ax_scatter.set_ylabel('Power Density [W.m$^{-2}$]')
 ax_scatter.minorticks_on()
 
-reflines = [{'y':29, 'string':'yearly avg solar', 'xl':-5, 'xr':10, 'xt':10, 'arrow args':{'arrowstyle':'<-', 'color':'orangered'}, 'text args':{'color':'orangered', 'va':'center', 'ha':'left'}},
+reflines = [{'y':32.5, 'string':'yearly avg solar', 'xl':-5, 'xr':10, 'xt':10, 'arrow args':{'arrowstyle':'<-', 'color':'orangered'}, 'text args':{'color':'orangered', 'va':'center', 'ha':'left'}},
             {'y':51, 'string':'300K to 3K limit', 'xl':-5, 'xr':10, 'xt':10, 'arrow args':{'arrowstyle':'<-', 'color':'black'}, 'text args':{'color':'black', 'va':'center', 'ha':'left'}}]
 for rl in reflines:
     ax_scatter.annotate(text='', xy=(rl['xr'],rl['y']), xytext=(rl['xl'],rl['y']), arrowprops=rl['arrow args'])
@@ -177,8 +179,8 @@ for rl in reflines:
 
 
 # Plot power magnitude examples
-sample_area = 10  # [m-2]
-power_magnitudes_guides = [{'label':'Average single person household \nin Australia for 1 day', 'PD':8*1e3 / (sample_area*24)},
+sample_area = 15.6  # [m-2]
+power_magnitudes_guides = [{'label':'Average customer in Randwick for 1 day', 'PD':12.2*1e3 / (sample_area*24)},
                            {'label':'800W microwave for 15 mins', 'PD':800*0.25 / (sample_area*24)},
                            {'label':'10W LED bulb for 5h', 'PD':10*5 / (sample_area*24)},
                            {'label':'5W phone charger for 2h', 'PD':10 / (sample_area*24)},
@@ -195,10 +197,10 @@ ax_powerguide.axis('off')
 custom_muopt_legend = []
 for diode in diodes:
     Eg, eta = diode['Eg'], diode['eta']
-    custom_muopt_legend += [Line2D([0],[0], linestyle='none', **diode['styleargs'],
-                                   label='E$_\mathrm{g}$=' + f'{Eg} eV' + ', $\eta_\mathrm{ext}=$' + f'{eta*100:.0f}%')]
+    custom_muopt_legend += [Line2D([0],[0], linestyle='none', markeredgecolor= 'dimgrey', markerfacecolor='dimgrey', **diode['styleargs'],
+                                   label=diode['id'] + ' - E$_\mathrm{g}$=' + f'{Eg} eV' + ', $\eta_\mathrm{ext}=$' + f'{eta*100:.0f}%')]
 
-ax_powerguide.legend(handles=custom_muopt_legend, loc='lower left')
+ax_powerguide.legend(handles=custom_muopt_legend, loc='lower left', title='Sample Diodes')
 
 ax_scatter.grid(axis='y')
 ax_scatter.set_xlim([-5,75])

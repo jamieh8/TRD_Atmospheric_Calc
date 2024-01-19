@@ -20,7 +20,7 @@ datasets_telfer = get_dataset_list()[0:3]
 for ds in datasets_telfer:
     cwv_str = ds['cwvstring']
     loc_str = ds['loc']
-    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
+    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str, Tskin=ds['Tskin'], date='23dec')
     Ephs = atm_data.photon_energies
     line_format_dct = {'color': ds['color'], 'linestyle': 'solid'}
     scatter_format = {'c': ds['color'], 'marker': ds['symbol'], 'markersize':8}
@@ -63,7 +63,7 @@ alg_de = pg.de(gen=50, ftol=1e-5)
 
 fig, axs = plt.subplots(1, 2, width_ratios=[3,1])
 
-ref_dataset = atmospheric_dataset_new('low', 'telfer')
+ref_dataset = atmospheric_dataset_new('low', 'telfer', Tskin=301.56, date='24oct')
 downwelling_photflux = ref_dataset.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV',
                                                                col_name='downwelling_flux')
 dwn_flux_yaxs = axs[0].twinx()
@@ -128,7 +128,7 @@ datasets_all = get_dataset_list()
 for ds in datasets_all:
     cwv_str = ds['cwvstring']
     loc_str = ds['loc']
-    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
+    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str, Tskin=ds['Tskin'], date='23dec')
     Ephs = atm_data.photon_energies
     line_format_dct = {'color': ds['color'], 'linestyle': 'solid'}
     scatter_format = {'c': ds['color'], 'marker': ds['symbol'], 'markersize':8}
