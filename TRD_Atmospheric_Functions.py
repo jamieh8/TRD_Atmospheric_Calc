@@ -11,17 +11,20 @@ from matplotlib.ticker import AutoMinorLocator, FixedLocator
 
 def get_dataset_list():
     datasets = [
+        #'darkorange', 'darkviolet', 'mediumseagreen'
         {'loc': 'telfer', 'cwvstring': 'low', 'tcwv': 6.63, 'Tskin': 301.56, 'color': 'darkorange', 'symbol': 'o'},
         {'loc': 'telfer', 'cwvstring': 'mid', 'tcwv': 34.45, 'Tskin': 306.43, 'color': 'darkviolet', 'symbol': 'o'},
         {'loc': 'telfer', 'cwvstring': 'high', 'tcwv': 70.51, 'Tskin': 299.86, 'color': 'mediumseagreen', 'symbol': 'o'},
+        # {'loc': 'telfer', 'cwvstring': 'low', 'tcwv': 6.63, 'Tskin': 301.56, 'color': 'lightgreen', 'symbol': 'o'},
+        # {'loc': 'telfer', 'cwvstring': 'mid', 'tcwv': 34.45, 'Tskin': 306.43, 'color': 'forestgreen', 'symbol': 'o'},
+        # {'loc': 'telfer', 'cwvstring': 'high', 'tcwv': 70.51, 'Tskin': 299.86, 'color': 'darkgreen', 'symbol': 'o'},
 
         {'loc': 'california', 'cwvstring': 'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
         {'loc': 'california', 'cwvstring': 'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
         {'loc': 'california', 'cwvstring': 'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
-        #
+
         {'loc': 'tamanrasset', 'cwvstring': 'low', 'tcwv': 2.87, 'Tskin': 287.31, 'color': 'lightblue', 'symbol': '^'},
-        {'loc': 'tamanrasset', 'cwvstring': 'mid', 'tcwv': 19.97, 'Tskin': 301.828, 'color': 'royalblue',
-         'symbol': '^'},
+        {'loc': 'tamanrasset', 'cwvstring': 'mid', 'tcwv': 19.97, 'Tskin': 301.828, 'color': 'royalblue', 'symbol': '^'},
         {'loc': 'tamanrasset', 'cwvstring': 'high', 'tcwv': 37.91, 'Tskin': 299.096, 'color': 'darkblue', 'symbol': '^'}
     ]
     return datasets
@@ -66,9 +69,9 @@ def Eph_to_wl(x):
 def wl_to_Ephs(x):
     return convert_from(x, units_in='wavelength [um]', units_out='photon energy [eV]')
 
-def add_wl_ticks(ax):
+def add_wl_ticks(ax, fontsize=None):
     secax = ax.secondary_xaxis('top', functions=(Eph_to_wl, wl_to_Ephs))
-    secax.set_xlabel('Wavelength, $\\lambda$ [um]')
+    secax.set_xlabel('Wavelength, $\\lambda$ [um]', fontsize=fontsize)
     wl_lbls = [100, 30, 20, 15, 10, 9, 8, 7, 6,5,4,3,2,1]
     secax.set_xticks(wl_lbls)
     wl_minor_ticks = np.array([])
@@ -84,6 +87,7 @@ def add_wl_ticks(ax):
     mtick_mod = list(np.flip(wl_minor_ticks))
     secax.xaxis.set_minor_locator(FixedLocator(mtick_mod))
     ax.minorticks_on()
+    return secax
     # secax.minorticks_on()
 
 
@@ -358,7 +362,7 @@ class atmospheric_dataset:
     def fill_in_downwelling(self):
         Ephs_sofar = self.photon_energies
         Fph_sofar = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
-        Ephs_after = np.arange(Ephs_sofar[-1] + 6.2 * 1e-5, 1, 6.2 * 1e-5)
+        Ephs_after = np.arange(Ephs_sofar[-1] + 6.2 * 1e-5, 2, 6.2 * 1e-5)
         if self.spectral_fill_type == 'none':
             Fph_after = np.zeros(len(Ephs_after))
         else:

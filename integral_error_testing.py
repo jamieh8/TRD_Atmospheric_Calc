@@ -56,9 +56,10 @@ for pdct in plot_dict:
             Vs += [opt_pd['Vmpp']]
         axs[1].plot(Egs, PDs, ls, c=pdct['colour'])
 
-    diff_in_PD = PDs/PDs_ref #100*(PDs-PDs_ref)/PDs_ref
+    # diff_in_PD = PDs/PDs_ref #100*(PDs-PDs_ref)/PDs_ref
+    diff_in_PD = PDs - PDs_ref
     axs[2].plot(Egs, diff_in_PD, c=pdct['colour'])
-    axs[2].text(x=Egs[-1], y=diff_in_PD[-1], s=' ' + pdct['label'], color=pdct['colour'], ha='left', va='center')
+    # axs[2].text(x=Egs[-1], y=diff_in_PD[-1], s=' ' + pdct['label'], color=pdct['colour'], ha='right', va='bottom')
 
 
 # ref plotting
@@ -79,9 +80,9 @@ axs[1].set_xlabel('Bangap, E$_g$ [eV]')
 axs[1].set_yscale('log')
 add_wn_ticks(axs[1])
 
-axs[2].set_ylabel('Power Density Difference [%]')
+axs[2].set_ylabel('Power Density Difference [W.m$^{-2}$]')
 axs[2].set_xlabel('Bangap, E$_g$ [eV]')
-# axs[2].set_yscale('log')
+axs[2].set_yscale('log')
 axs[2].set_xlim([0.05,0.36])
 # custom_legend = [Line2D([0],[0], color = 'k', linestyle='solid', label='quad '),
 #                        Line2D([0],[0], color = 'k', linestyle='dashed', label='trapz')]

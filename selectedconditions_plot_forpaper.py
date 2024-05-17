@@ -14,17 +14,19 @@ def retrieve_dat(month):
     return dat_array_spliced
 
 def add_location_annots(ax):
-    annots = [{'label':'Tamanrasset', 'coords':(5.5,22.75), 'offset':(-10,30), 'textcoords':(8,55),'symbol':'^', 'textalign':{'ha':'left', 'va':'center'}},
-              {'label':'California', 'coords':(-120,36.75), 'offset':(0, 30), 'textcoords':(-102,64),'symbol':'s', 'textalign':{'ha':'left', 'va':'center'}},
+    annots = [{'label':'Tamanrasset', 'coords':(5.5, 22.75), 'offset':(-10,30), 'textcoords':(8,55),'symbol':'^', 'textalign':{'ha':'left', 'va':'center'}},
+              {'label':'Fresno', 'coords':(-120, 36.75), 'offset':(0, 30), 'textcoords':(-102,64),'symbol':'s', 'textalign':{'ha':'left', 'va':'center'}},
               {'label':'Telfer', 'coords':(122.25, -21.75), 'offset':(-20,-20), 'textcoords':(90,-50),'symbol':'o', 'textalign':{'ha':'right', 'va':'center'}}]
     for annot in annots:
         offset_coords = (annot['coords'][0]+annot['offset'][0], annot['coords'][1]+annot['offset'][1])
         ax.annotate(' ', xy=annot['coords'], xytext=offset_coords, ha='center', va='center', color='black', arrowprops={'arrowstyle':'->', 'color':'red', 'linewidth':2})
         ax.plot(offset_coords[0], offset_coords[1], marker=annot['symbol'], c='white', markersize=15, mec='red', mew=2)
-        ax.text(x=annot['textcoords'][0],y=annot['textcoords'][1], s=annot['label'], **annot['textalign'], bbox = {'color':'white', 'pad':0.4})
+        ax.text(x=annot['textcoords'][0],y=annot['textcoords'][1], s=annot['label'], **annot['textalign'], bbox = {'color':'white', 'pad':0.4}, fontsize=label_fontsize-1)
 
 
 datasets = get_dataset_list()[0:3]
+
+label_fontsize = 13
 
 fig = plt.figure(figsize=(15,7))
 gsmap = fig.add_gridspec(2, 3, width_ratios=[3,2,4], hspace=0.1, wspace=0.3)
@@ -70,9 +72,10 @@ fig.subplots_adjust(left=0.05, right=0.95, bottom=0.15, top=0.9)
 cb_ax = fig.add_axes([0.05, 0.1, 0.25, 0.02])  # x0, y0, width, height
 
 cbar = fig.colorbar(hmap, cax=cb_ax, orientation='horizontal')
-cbar.ax.set_xlabel('Decadal mean TCWV [mm]', fontsize=10)
+cbar.ax.set_xlabel('Decadal mean TCWV [mm]', fontsize=label_fontsize)
 cbar.ax.set_xticks(contours)
 cbar.ax.set_xlim([0, 66])
+
 
 
 # add rest of subplots
@@ -87,20 +90,8 @@ copied_data = np.loadtxt('histogram-plot-data.csv', skiprows=1, delimiter=',')
 edges = np.arange(0,copied_data[-1,0]+1,1)
 ax_hist.stairs(copied_data[:,1], edges=edges, fill=True, fc='silver')
 
-vert_line_dicts = [
-    {'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'ls': 'dotted', 'symbol': 's'},
-    {'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'ls': 'dotted', 'symbol': 's'},
-    {'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'ls': 'dotted', 'symbol': 's'},
 
-    {'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'ls':'solid', 'symbol':'o'},
-    {'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','ls':'solid', 'symbol':'o'},
-    {'tcwv':70.51, 'Tskin':299.86, 'color':'mediumseagreen','ls':'solid', 'symbol':'o'},
-
-    {'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'ls':'dashed', 'symbol':'^'},
-    {'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'ls':'dashed', 'symbol':'^'},
-    {'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'ls':'dashed', 'symbol':'^'}]
-
-for line_dict in vert_line_dicts:
+for line_dict in get_dataset_list():
     tcwv = line_dict['tcwv']
     Tskin = line_dict['Tskin']
     insert_index = np.searchsorted(edges, line_dict['tcwv'])
@@ -114,15 +105,15 @@ for line_dict in vert_line_dicts:
 
     ax_scatter.plot([tcwv], [Tskin], line_dict['symbol'], c=line_dict['color'], markersize=7)
 
-ax_scatter.set_xlabel('TCWV [mm]')
-ax_scatter.set_ylabel('Skin Temp [K]')
+ax_scatter.set_xlabel('TCWV [mm]', fontsize=label_fontsize)
+ax_scatter.set_ylabel('Skin Temp [K]', fontsize=label_fontsize)
 ax_scatter.set_xlim([0,75])
 ax_scatter.set_ylim([275, 310])
 ax_scatter.minorticks_on()
 ax_scatter.grid()
 
-ax_hist.set_xlabel('TCWV [mm]')
-ax_hist.set_ylabel('Occurence [%]')
+ax_hist.set_xlabel('TCWV [mm]', fontsize=label_fontsize)
+ax_hist.set_ylabel('Occurence [%]', fontsize=label_fontsize)
 ax_hist.set_ylim([0,4])
 ax_hist.set_xlim([0,75])
 
@@ -134,22 +125,32 @@ for ds in datasets:
     loc_str = ds['loc']
     atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str, Tskin=ds['Tskin'], date='23dec')
     Ephs = atm_data.photon_energies
-    downwelling_ph_fl = atm_data.retrieve_spectral_array(yvals='W.cm-2', xvals='cm-1')
+    downwelling_ph_fl = atm_data.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV')
     ax_dwf.plot(Ephs, downwelling_ph_fl, c=ds['color'], label=f'{loc_str.capitalize()} {cwv_str}')
 
-ax_dwf.set_ylabel('Spectral Photon Flux Density, F$_\mathrm{ph}$ [s$^{-1}$.m$^{-2}$/eV]')
+ax_dwf.set_ylabel('Spectral Photon Flux Density, F$_\mathrm{ph}$ [s$^{-1}$.m$^{-2}$/eV]', fontsize=label_fontsize)
 # ax.set_ylabel('Spectral Irradiance, F$_e$ [W.cm$^{-2}$/cm$^{-1}$]')
-ax_dwf.set_xlabel('Photon Energy, E$_\mathrm{ph}$ [eV]')
-ax_dwf.legend(loc='lower left')
+ax_dwf.set_xlabel('Photon Energy, E$_\mathrm{ph}$ [eV]', fontsize=label_fontsize)
+ax_dwf.legend(loc='lower left', fontsize=label_fontsize)
 ax_dwf.set_xlim([0.01, 0.31])
-ax_dwf.set_ylim([1e-8, 1e-4])
+ax_dwf.set_ylim([1e19, 1e24])
 ax_dwf.set_yscale('log')
 
-add_wl_ticks(ax_dwf)
+wl_ax = add_wl_ticks(ax_dwf, fontsize=label_fontsize)
 # add_wn_ticks(ax)
 
-map_axs[0]. set_title('a)', loc='left', fontsize=15, fontweight='bold', y=1.05, x=-0.1)
-for letter, ax in zip(['b','c','d'], axs):
-    ax.set_title(letter+')', loc='left', fontsize=15, fontweight='bold', y=1.05, x=-0.1)
+for ax in [cb_ax, ax_scatter, ax_hist, ax_dwf, wl_ax]:
+    ax.tick_params(axis='x', labelsize=label_fontsize)
+    ax.tick_params(axis='y', labelsize=label_fontsize)
+
+
+
+# adding a, b, c, d labelling
+# map_axs[0]. set_title('a)', loc='left', fontsize=15, fontweight='bold', y=1.05, x=-0.1)
+# for letter, ax in zip(['b','c','d'], axs):
+#     ax.set_title(letter+')', loc='left', fontsize=15, fontweight='bold', y=1.05, x=-0.1)
+
+
+plt.savefig(r'C:\Users\z5426944\OneDrive - UNSW\Documents\Thermoradiative Diode\Figures\Figs Final\SelectedConditions_Fig.eps',bbox_inches='tight')
 
 plt.show()

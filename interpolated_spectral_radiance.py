@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy import interpolate
 from TRD_Atmospheric_Functions import *
 from matplotlib.colors import Normalize, LogNorm
@@ -8,7 +9,6 @@ def Eph_to_sx(x):
 
 def sx_to_Ephs(x):
     return convert_from(x, units_in='wavenumber [cm-1]', units_out='photon energy [eV]')
-
 
 
 def interpolation_method(x_predict, x_known, y_known, Eph):
@@ -35,10 +35,10 @@ def interpolation_method(x_predict, x_known, y_known, Eph):
 
 
 # atm_data = atmospheric_dataset(cwv=24)
-cwv_str, Tskin = 'low', 301.56
-# cwv_str, Tskin = 'mid', 306.43
+# cwv_str, Tskin = 'low', 301.56
+cwv_str, Tskin = 'mid', 306.43
 # cwv_str, Tskin = 'high', 299.86
-atm_data = atmospheric_dataset_new(cwv=cwv_str, location='telfer')
+atm_data = atmospheric_dataset_new(cwv=cwv_str, location='telfer', Tskin=Tskin)
 emitter = planck_law_body(T=Tskin, Ephs=atm_data.photon_energies)
 
 known_angles = atm_data.zenith_angles
@@ -51,11 +51,11 @@ angle_array = np.arange(0,91,1)
 
 
 # make heatmap
-include_slices = False
-include_interpolation = False
+include_slices = True
+include_interpolation = True
 plot_Lcos = True
 
-plot_difference = True
+plot_difference = False
 
 
 ncols = 1
@@ -74,7 +74,8 @@ fig, axs = plt.subplots(1,ncols, layout='tight')
 # xvals = 'um'
 
 # dat_str = r'Directional, Spectral PDF [$\mathrm{s^{-1}.m^{-2}.sr^{-1}/eV}$]'
-dat_str = r'$\Delta$ (L$_\mathrm{ph}$ cos$\,\theta$) [$\mathrm{s^{-1}.m^{-2}.sr^{-1}/eV}$]'
+dat_str = r'L$_\mathrm{ph}$ cos$\,\theta$ [$\mathrm{s^{-1}.m^{-2}.sr^{-1}/eV}$]'
+# dat_str = r'$\Delta$ (L$_\mathrm{ph}$ cos$\,\theta$) [$\mathrm{s^{-1}.m^{-2}.sr^{-1}/eV}$]'
 xl_str = 'Photon Energy, E$_\mathrm{ph}$ [eV]'
 xs = Ephs
 yvals = 's-1.m-2'
@@ -104,15 +105,19 @@ if plot_difference:
 
     dat_2D_int = Lph_costheta - dat_2D_int
 
+    norm_0mid = Normalize(vmin=-1 * 1e22, vmax=1 * 1e22)
+    style_args = {'cmap':'bwr', 'norm':norm_0mid, 'shading':'nearest'}
+else:
+    style_args = {'cmap': 'magma', 'norm':LogNorm(vmin=1e20, vmax=4e23), 'shading': 'nearest'}
+
 
 if include_slices or include_interpolation:
     h_ax = axs[0]
 else:
     h_ax = axs
 
-norm_0mid = Normalize(vmin=-1*1e22, vmax=1*1e22)
 
-hmap = h_ax.pcolor(xs, angle_array, dat_2D_int, cmap='bwr', norm=norm_0mid, shading='nearest')  # heatmap, 'inferno'
+hmap = h_ax.pcolor(xs, angle_array, dat_2D_int, **style_args)  # heatmap, 'inferno'
 cbar = plt.colorbar(hmap)
 cbar.ax.tick_params(labelsize=10)
 cbar.ax.set_ylabel(dat_str)
@@ -142,6 +147,7 @@ if include_slices:
     for i in range(len(s_idxs)):
         si = s_idxs[i]
         swav = slice_xs[i]
+        Eph = atm_data.photon_energies[si]
         col = cmap(i)
         # plot spectral rad vs angle for a particular photon energy / wavelength
         spectral_rad_slice = dat_2D_int[:,si]
@@ -149,7 +155,6 @@ if include_slices:
 
         not_int_slice = dat_2D[:,si]  # not interpolated data at particular wavelength
         for angle_i, L_i in zip(known_angles, not_int_slice):
-
             # plot point for uninterpolated data
             y = L_i
             if plot_Lcos:
@@ -157,16 +162,16 @@ if include_slices:
             slice_ax.plot(angle_i, y, 'o', c=col)
 
             if include_interpolation:
-                Eph = atm_data.photon_energies[si]
+                axs[2].plot(1/np.cos(np.radians(angle_i)), L_i, 'o', c=col)  # plotted for each angle, each photon energy
 
-                # new_x_ref = 1/np.cos(np.radians([0,53,70]))
-                # y_ref = not_int_slice * np.cos(np.radians([0,53,70]))
-                axs[2].plot(1/np.cos(np.radians(angle_i)), y, 'o', c=col)
+        # angles_array_forlinint = np.arange(0,87,1)
+        # new_x_interp = 1 / np.cos(np.radians(angles_array_forlinint))
+        # new_x_known = 1 / np.cos(np.radians(known_angles))
+        # interpolated_vals_forwav = interpolation_method(x_predict=new_x_interp, x_known=new_x_known, y_known=not_int_slice, Eph=Eph)
+        # axs[2].plot(new_x_interp, interpolated_vals_forwav, '--', c=col)
 
-                new_x_interp = 1 / np.cos(np.radians(angle_array))
-                interpolated_vals_forwav = interpolation_method(x_predict=angle_array, x_known=known_angles, y_known = not_int_slice, Eph= Eph)
-                axs[2].plot(new_x_interp, interpolated_vals_forwav, '--', c=col)
-
+        new_x = 1/np.cos(np.radians(angle_array[0:-3]))
+        axs[2].plot(new_x, spectral_rad_slice[0:-3]*new_x, '--', c=col)
         h_ax.plot(2*[swav], [angle_array[0],angle_array[-1]], '--', c=col)
 
     slice_ax.set_xlabel('Zenith Angle, $\\theta$ [$\circ$]')
@@ -176,5 +181,9 @@ if include_slices:
 if include_interpolation:
     axs[2].set_xlabel('Path Length Fraction, $\\frac{p(\\theta)}{p_0} = \\frac{1}{\cos\\theta}$')
     axs[2].set_ylabel(dat_str)
+    axs[2].set_xlim([0.4,15])
+    axs[2].set_ylabel(r'L$_\mathrm{ph}$ [$\mathrm{s^{-1}.m^{-2}.sr^{-1}/eV}$]')
+
+
 
 plt.show()

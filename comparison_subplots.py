@@ -133,10 +133,10 @@ include_Ndot_diff = False
 include_heaviside_ex = False
 Eg_ex = 0.25
 
-include_muopt_plots = True
+include_muopt_plots = False
 opt_Eg_and_mu = False  # adds points at optimal Eg
-log_power = True
-atmdat_background = True
+log_power = False
+atmdat_background = False
 use_cust_legend = False
 
 include_Eg_PD_scatter = False

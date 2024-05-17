@@ -5,6 +5,8 @@ from matplotlib.colors import Normalize, LogNorm
 from matplotlib import ticker, text
 import matplotlib.gridspec as gridspec
 
+label_fontsize = 14
+
 # Heatmap
 eta_count = 80
 # x_sweep = np.linspace(0.01,1, 40)
@@ -109,9 +111,9 @@ h_ax.set_xscale('log')
 
 # Colorbar formatting
 cbar = plt.colorbar(hmap)
-cbar.ax.tick_params(labelsize=10)
+cbar.ax.tick_params(labelsize=label_fontsize)
 # cbar.ax.set_ylabel(r'Spectral Photon Flux [$\mathrm{s^{-1}.m^{-2}.sr^{-1}/eV}$]')
-cbar.ax.set_ylabel(cb_label)
+cbar.ax.set_ylabel(cb_label, fontsize=label_fontsize)
 
 if add_loglvls:
     log_lvls = 10. ** np.arange(start=-7, stop=2)
@@ -143,9 +145,11 @@ if commercial_diode_ref:
 
 
 
-h_ax.set_xlabel('Radiative Efficiency, $\eta_\mathrm{ext}$')
-h_ax.set_ylabel('Bandgap, E$_\mathrm{g}$ [eV]')
+h_ax.set_xlabel('Radiative Efficiency, $\eta_\mathrm{ext}$', fontsize=label_fontsize)
+h_ax.set_ylabel('Bandgap, E$_\mathrm{g}$ [eV]', fontsize=label_fontsize)
 h_ax.set_xlim([x_sweep[0], x_sweep[-1]])
+h_ax.tick_params(axis='x', labelsize=label_fontsize)
+h_ax.tick_params(axis='y', labelsize=label_fontsize)
 
 
 diodes = [{'id':'A', 'Eg':0.094, 'eta':1, 'styleargs':{}},
@@ -163,13 +167,16 @@ for diode in diodes:
         style_args.update(case['scatter format'])
         ax_scatter.plot(case['cwv'], opt_pd[0]*(-1), **style_args)
 
-
 ax_scatter.set_yscale('log')
-ax_scatter.set_xlabel('TCWV [mm]')
-ax_scatter.set_ylabel('Power Density [W.m$^{-2}$]')
+ax_scatter.set_xlabel('TCWV [mm]', fontsize=label_fontsize)
+ax_scatter.set_ylabel('Power Density [W.m$^{-2}$]', fontsize=label_fontsize)
 ax_scatter.minorticks_on()
+ax_scatter.tick_params(axis='x', labelsize=label_fontsize)
+ax_scatter.tick_params(axis='y', labelsize=label_fontsize)
 
-reflines = [{'y':32.5, 'string':'yearly avg solar', 'xl':-5, 'xr':10, 'xt':10, 'arrow args':{'arrowstyle':'<-', 'color':'orangered'}, 'text args':{'color':'orangered', 'va':'center', 'ha':'left'}},
+
+yearly_avg_solar_Wm2 = 32.5
+reflines = [{'y':yearly_avg_solar_Wm2, 'string':'yearly avg solar', 'xl':-5, 'xr':10, 'xt':10, 'arrow args':{'arrowstyle':'<-', 'color':'orangered'}, 'text args':{'color':'orangered', 'va':'center', 'ha':'left'}},
             {'y':51, 'string':'300K to 3K limit', 'xl':-5, 'xr':10, 'xt':10, 'arrow args':{'arrowstyle':'<-', 'color':'black'}, 'text args':{'color':'black', 'va':'center', 'ha':'left'}}]
 for rl in reflines:
     ax_scatter.annotate(text='', xy=(rl['xr'],rl['y']), xytext=(rl['xl'],rl['y']), arrowprops=rl['arrow args'])
@@ -179,18 +186,19 @@ for rl in reflines:
 
 
 # Plot power magnitude examples
-sample_area = 15.6  # [m-2]
-power_magnitudes_guides = [{'label':'Average customer in Randwick for 1 day', 'PD':12.2*1e3 / (sample_area*24)},
+ref_to_power = 9.6 # kWh
+sample_area = np.round(ref_to_power / (24 * yearly_avg_solar_Wm2 * 1e-3), decimals=1) # 15.6  # [m2]
+power_magnitudes_guides = [{'label':'Average customer in Sydney for 1 day', 'PD':12.2*1e3 / (sample_area*24)},
                            {'label':'800W microwave for 15 mins', 'PD':800*0.25 / (sample_area*24)},
                            {'label':'10W LED bulb for 5h', 'PD':10*5 / (sample_area*24)},
                            {'label':'5W phone charger for 2h', 'PD':10 / (sample_area*24)},
                            {'label':'60W fridge for 24h', 'PD':60*24 / (sample_area*24)},]
 ax_powerguide = axs[2]
 for pguide in power_magnitudes_guides:
-    ax_powerguide.annotate(pguide['label'], xy=(0,pguide['PD']), xytext=(0.1, pguide['PD']), arrowprops=dict(arrowstyle="->"), va='center')
+    ax_powerguide.annotate(pguide['label'], xy=(0,pguide['PD']), xytext=(0.1, pguide['PD']), arrowprops=dict(arrowstyle="->"), va='center', fontsize=label_fontsize-2)
     # ax_powerguide.text(s=pguide['label'], x=0.05, y=pguide['PD'], ha='left', va='bottom')
     # print(pguide['label'] + ' ' + str(pguide['PD']*24))
-ax_powerguide.set_title(f'   Over 24h, {sample_area} m$^2$ can power:', loc='left')
+ax_powerguide.set_title(f'   Over 24h, {sample_area} m$^2$ can power:', loc='left', fontsize=label_fontsize)
 ax_powerguide.axis('off')
 
 # Add legend in second plot
@@ -200,14 +208,20 @@ for diode in diodes:
     custom_muopt_legend += [Line2D([0],[0], linestyle='none', markeredgecolor= 'dimgrey', markerfacecolor='dimgrey', **diode['styleargs'],
                                    label=diode['id'] + ' - E$_\mathrm{g}$=' + f'{Eg} eV' + ', $\eta_\mathrm{ext}=$' + f'{eta*100:.0f}%')]
 
-ax_powerguide.legend(handles=custom_muopt_legend, loc='lower left', title='Sample Diodes')
+ax_powerguide.legend(handles=custom_muopt_legend, loc='lower left', title='Sample Diodes', fontsize=label_fontsize-3, title_fontsize=label_fontsize-3)
 
 ax_scatter.grid(axis='y')
 ax_scatter.set_xlim([-5,75])
 ax_scatter.set_ylim([1e-4, 1e2])
 
+
+# plt.rcParams.update({'font.size': 40})
+
 # text.Annotation('figure points text', xy=(0.5,0.5), xycoords='figure fraction',fontsize=15, fontweight='bold')
 ax_scatter.set_title('b)', loc='left', fontsize=15, fontweight='bold', pad=15, x=-0.3)
 h_ax.set_title('a)', loc='left', fontsize=15, fontweight='bold', pad=15, x=-0.15)
+
+
+plt.savefig(r'C:\Users\z5426944\OneDrive - UNSW\Documents\Thermoradiative Diode\Figures\Figs Final\NonRad_Fig.eps',bbox_inches='tight')
 
 plt.show()
