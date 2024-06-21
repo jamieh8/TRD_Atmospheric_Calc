@@ -7,6 +7,7 @@ import matplotlib.gridspec as gridspec
 
 label_fontsize = 14
 set_font_opensans()
+os.chdir('..')  # 'reverse' out of "plotting for paper" folder
 
 sample_diode_ref = True
 diodes_to_plt = [{'id':'A','eta_ext': 1, 'Eg': 0.094, 'style_args': {'marker': 'o', 'markersize': 8}},
@@ -23,7 +24,7 @@ Eg_count = 80
 y_sweep = np.linspace(Eg_start, 0.3, Eg_count)
 
 case_dict = get_dataset_list()[1]
-os.chdir('..')  # 'reverse' out of "plotting for paper" folder
+
 atm_data = atmospheric_dataset_new(cwv=case_dict['cwvstring'], location=case_dict['loc'], Tskin=case_dict['Tskin'], date='23dec')
 case_label = case_dict['loc'] + ' ' + case_dict['cwvstring']
 filename = f'PD_heatmaps\PD_{case_label}_etaextlog_-4_0_{eta_count}_Egs_{Eg_start}_02_{Eg_count}.csv'

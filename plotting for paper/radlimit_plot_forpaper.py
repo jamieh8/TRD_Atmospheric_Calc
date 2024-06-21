@@ -11,6 +11,7 @@ def v_to_Ephs(x):
 
 set_font_opensans()
 label_fontsize=14
+os.chdir('..')  # 'reverse' out of "plotting for paper" folder
 
 comparison_lst = []
 

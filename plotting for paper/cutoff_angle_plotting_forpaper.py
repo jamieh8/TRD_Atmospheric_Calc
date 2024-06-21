@@ -7,10 +7,11 @@ from TRD_Atmospheric_Functions import *
 new_file_dicts = get_dataset_list()[0:3]
 
 set_font_opensans()
+os.chdir('..')  # 'reverse' out of "plotting for paper" folder
 
 for case in new_file_dicts:
     loc, tcwvstr = case['loc'], case['cwvstring']
-    filename = f'{loc} {tcwvstr}_sweep_cutoff_angle.csv'
+    filename = r'cutoff angle sweep results\\' + f'{loc} {tcwvstr}_sweep_cutoff_angle.csv'
     loaddat = np.loadtxt(fname = filename, delimiter=',')
     angles, powers = loaddat[:,0], loaddat[:,1]
     relative_change = powers/powers[-1]

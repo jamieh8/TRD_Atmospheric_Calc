@@ -28,6 +28,7 @@ datasets = get_dataset_list()[0:3]
 
 set_font_opensans()
 label_fontsize = 13
+os.chdir('..')  # 'reverse' out of "plotting for paper" folder
 plot_downwelling_separately = True
 
 if plot_downwelling_separately:
@@ -100,7 +101,7 @@ cbar.ax.set_xlim([0, 66])
 
 
 # Histogram and scatter plot
-copied_data = np.loadtxt('../histogram-plot-data.csv', skiprows=1, delimiter=',')
+copied_data = np.loadtxt('histogram-plot-data.csv', skiprows=1, delimiter=',')
 edges = np.arange(0,copied_data[-1,0]+1,1)
 ax_hist.stairs(copied_data[:,1], edges=edges, fill=True, fc='silver')
 
