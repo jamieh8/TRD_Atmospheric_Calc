@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 from TRD_Atmospheric_Functions import *
 
 # This file steps through some x axis (defined by 'arg_sweep_str', with values given by 'x_vals_sweep') and
@@ -8,6 +7,7 @@ from TRD_Atmospheric_Functions import *
 # This file was used, for example, to produce the angular restriction plot (max power vs cutoff angle).
 # In that case, 'cutoff_angle' is the 'arg_sweep_str', and 'mu' (or V) is to be optimized at each angle to find the MPP.
 # If the results of this optimization are saved (save_results = True), they can be plotted in 'cutoff_angle_plotting_forpaper.py'
+
 
 # ----------------- Line/Sweep Optimization Plotter -----------------
 

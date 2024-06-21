@@ -9,6 +9,7 @@ from matplotlib import ticker
 # This file was used to generate the Bandgap & Radiative Efficiency heatmap,
 # where each point in the heatmap the result of some optimization over mu / operating voltage.
 
+
 # ----------------- Heatmap ----------------- #
 fig, axs = plt.subplots(1,1)
 # Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
@@ -25,7 +26,7 @@ fig, axs = plt.subplots(1,1)
 # arg_fix_extra = {'cutoff_angle':None,'eta_ext':1, 'consider_nonrad':False}
 # norm_str = 'mid0'
 # x_log = False
-# commercial_diode_ref = False
+# sample_diode_ref = False
 
 # Cutoff Angle & Bandgap. Opt over mu
 # x_sweep = np.linspace(10,90,21)
@@ -35,7 +36,7 @@ fig, axs = plt.subplots(1,1)
 # y_id_str = 'Eg'
 # args_to_opt= ['mu']
 # arg_fix_extra = {'eta_ext':1, 'consider_nonrad':False}
-# commercial_diode_ref = False
+# sample_diode_ref = False
 # norm_str = 'default'
 # x_log = False
 
@@ -51,7 +52,7 @@ y_sweep = np.linspace(Eg_start, 0.3, Eg_count)
 y_id_str = 'Eg'
 args_to_opt = ['mu']
 arg_fix_extra = {'cutoff_angle':None, 'consider_nonrad':True}
-commercial_diode_ref = True
+sample_diode_ref = True
 norm_str = 'log power'
 
 
@@ -184,7 +185,7 @@ if add_loglvls:
 
 
 # adding commercial diodes for ref
-if commercial_diode_ref:
+if sample_diode_ref:
     diodes_to_plt = [{'eta_ext':1, 'Eg':0.094, 'style_args':{'marker':'o', 'color':'darkviolet', 'markersize':8}},
                       {'eta_ext':1e-2, 'Eg':0.094, 'style_args':{'marker':'o', 'color':'darkviolet', 'markersize':8, 'fillstyle':'right'}},
                      {'eta_ext':1e-1, 'Eg':0.25, 'style_args':{'marker':'o', 'mfc':'none', 'mew':2, 'color':'darkviolet', 'markersize':8}}]

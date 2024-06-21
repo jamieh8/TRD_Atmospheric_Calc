@@ -3,6 +3,8 @@ from TRD_Atmospheric_Functions import *
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
+# plotting tool used during testing to probe results.
+
 def Eph_to_v(x):
     return convert_from(x, units_in = 'photon energy [eV]', units_out = 'wavenumber [cm-1]')
 
@@ -12,51 +14,11 @@ def v_to_Ephs(x):
 
 comparison_lst = []
 
-# comparing different cutoff angles
-# # # cwv, T = 10, 296.724
-# # # cwv, T = 24, 304.868
-# # cwv, T = 54, 303.512
-# cwv_str = 'low'
-# loc_str = 'telfer'
-# Tskin = 299.86
-# atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str)
-# Ephs = atm_data.photon_energies
-# emitter_planck = planck_law_body(T=Tskin, Ephs=Ephs)
-# angle_array = np.arange(0,91,1)
-# Egs_AD = np.arange(0.02, 0.2, 0.05)
-#
-# cmap = plt.get_cmap('tab10')
-# cutoff_angles = np.arange(10,95,20)
-# for ai, cutoff_angle in enumerate(cutoff_angles):
-#     line_format_dct = {'color':cmap(ai), 'linestyle':'solid'}
-#     comparison_lst += [{'label':f'{loc_str} {cwv_str}, cutoff {cutoff_angle}', 'color':cmap(ai),
-#                         'line format':line_format_dct, 'scatter format':{'marker':'o', 'c':cmap(ai)},
-#                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
-#                         'cutoff angle':cutoff_angle, 'Egs':Egs_AD, 'use diffusivity approx':False}]
-#
-# line_format_diff = {'color':'black', 'linestyle':'dashed', 'dashes':(4,4)}
-# comparison_lst += [{'label': f'{loc_str} {cwv_str}, diffusivity approx 53$^\circ \\times \pi$',
-#                     'line format':line_format_diff, 'scatter format':{'marker':'o', 'c':'k'},
-#                     'atmospheric dataset': atm_data, 'emitter body': emitter_planck,
-#                     'cutoff angle': None, 'Egs': Egs_AD, 'use diffusivity approx': True}]
 
-
-# comparing new datasets:
+# comparing datasets:
 angle_array = [0]
 Egs_AD = np.arange(0.0125, 0.3, 0.002)
-datasets = [
-    {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o'},
-    {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o'},
-
-    # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
-    # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
-    # {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
-    #
-    # {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
-    # {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
-    # {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
-    ]
+datasets = get_dataset_list()[0:3]
 
 for ds in datasets:
     cwv_str = ds['cwvstring']
@@ -69,23 +31,6 @@ for ds in datasets:
     comparison_lst += [{'label': f'{loc_str.capitalize()} {cwv_str}', 'line format':line_format_dct, 'scatter format':scatter_format,
                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
                          'cutoff angle':None, 'use diffusivity approx':True, 'Egs':Egs_AD}]
-
-
-# comparing different cwvs
-# Egs_AD = np.arange(0.062, 0.3, 0.002)
-# datsets = [{'cwv':10, 'Tc':296.724, 'colour':'deeppink'},
-#            # {'cwv':24, 'Tc':304.868, 'colour':'steelblue'},
-#            # {'cwv':54, 'Tc':303.512, 'colour':'seagreen'}
-#            ]
-# for ds in datsets:
-#     cwv = ds['cwv']
-#     atm_data = atmospheric_dataset(cwv=cwv)
-#     Ephs = atm_data.photon_energies
-#     line_format_dct = {'color': ds['colour'], 'linestyle': 'solid'}
-#     emitter_planck = planck_law_body(T=ds['Tc'], Ephs=Ephs)
-#     comparison_lst += [{'label': f'cwv{cwv}', 'line format':line_format_dct,
-#                         'atmospheric dataset':atm_data, 'emitter body':emitter_planck,
-#                          'cutoff angle':None, 'use diffusivity approx':True, 'Egs':Egs_AD}]
 
 
 # BBs at T skin
@@ -104,7 +49,6 @@ for ds in datasets:
 # for dataset_entry in comparison_lst:
 #     Teffective = dataset_entry['atmospheric dataset'].effective_skytemp(300)
 #     Tsets += [{'Tc':Teffective, 'colour':dataset_entry['line format']['color']}]
-#
 #
 # for Ts in Tsets:
 #     Tc = Ts['Tc']
@@ -133,8 +77,8 @@ include_Ndot_diff = False
 include_heaviside_ex = False
 Eg_ex = 0.25
 
-include_muopt_plots = False
-opt_Eg_and_mu = False  # adds points at optimal Eg
+include_muopt_plots = True
+opt_Eg_and_mu = True  # adds points at optimal Eg
 log_power = False
 atmdat_background = False
 use_cust_legend = False
