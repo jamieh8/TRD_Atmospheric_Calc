@@ -9,7 +9,7 @@ def Eph_to_v(x):
 def v_to_Ephs(x):
     return convert_from(x, units_in='wavenumber [cm-1]', units_out='photon energy [eV]')
 
-
+set_font_opensans()
 label_fontsize=14
 
 comparison_lst = []
@@ -64,7 +64,8 @@ alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
 alg_de = pg.de(gen=50, ftol=1e-5)
 
 
-fig, axs = plt.subplots(1, 2, width_ratios=[3,1])
+fig, axs = plt.subplots(1, 2, width_ratios=[2.4,1])
+fig.subplots_adjust(left=0.073, right=0.973, wspace=0.45)
 
 ref_dataset = atmospheric_dataset_new('low', 'telfer', Tskin=301.56, date='24oct')
 downwelling_photflux = ref_dataset.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV',
@@ -150,10 +151,10 @@ for sample_dct in scatter_lst:
 
     axs_scatter.plot(opt_xs['Eg'], pd, **sample_dct['scatter format'])
 
-custom_scatter_legend = [Line2D([0],[0], marker='o', color = 'w', mfc='grey', label='Telfer', markersize=9),
-                         Line2D([0],[0], marker='s', color = 'w', mfc='grey', label='Fresno', markersize=8),
-                         Line2D([0],[0], marker='^', color = 'w', mfc='grey', label='Tamanrasset', markersize=10)]
-axs_scatter.legend(handles=custom_scatter_legend, loc='upper right')
+custom_scatter_legend = [Line2D([0],[0], marker='o', color = 'w', mfc='grey', label='Telfer', markersize=10),
+                         Line2D([0],[0], marker='s', color = 'w', mfc='grey', label='Fresno', markersize=9),
+                         Line2D([0],[0], marker='^', color = 'w', mfc='grey', label='Tamanrasset', markersize=11)]
+axs_scatter.legend(handles=custom_scatter_legend, loc='upper right', fontsize=label_fontsize, borderpad=0.2, handletextpad=0.3)
 
 axs_scatter.set_xlabel('Optimal Bandgap, E$_\mathrm{g}$ [eV]', fontsize=label_fontsize)
 axs_scatter.set_ylabel('Max Power Density [W.m$^{-2}$]', fontsize=label_fontsize)
@@ -167,8 +168,8 @@ for ax in np.append(axs, [wl_ax, dwn_flux_yaxs]):
 
 axs_scatter.tick_params(axis='x', labelsize=12)
 
-axs[0].set_title('a)', loc='left', fontsize=15, fontweight='bold', y=1.05, x=-0.05)
-axs_scatter.set_title('b)', loc='left', fontsize=15, fontweight='bold', y=1.05, x=-0.15)
+axs[0].set_title('a)', loc='left', fontsize=20, fontweight='bold', y=1.05, x=-0.1)
+axs_scatter.set_title('b)', loc='left', fontsize=20, fontweight='bold', y=1.05, x=-0.15)
 
 
 plt.show()

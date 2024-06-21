@@ -2,7 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from TRD_Atmospheric_Functions import *
 
+# This file plots results from 'linesweep_opt_gen.py', which finds the MPP at each cutoff angle.
+
 new_file_dicts = get_dataset_list()[0:3]
+
+set_font_opensans()
 
 for case in new_file_dicts:
     loc, tcwvstr = case['loc'], case['cwvstring']

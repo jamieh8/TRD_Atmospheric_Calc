@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import matplotlib
-# import seaborn as sns
 from TRD_Atmospheric_Functions import *
 
 # Drawing I-V, power curves
@@ -12,7 +11,6 @@ cmap_coolwarm = matplotlib.colormaps['coolwarm']
 cmap_rainbow = matplotlib.colormaps['jet']
 cmap_magma = matplotlib.colormaps['magma']
 hue_neg, hue_pos = 250, 15
-# cmap_custom_div = sns.diverging_palette(hue_neg, hue_pos, l=70, center='dark', as_cmap=True)
 
 Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
 
@@ -24,14 +22,14 @@ Egs_dw = np.arange(0.15, 0.20, 0.002)
 
 to_plot = []
 
-# Atmospheric Data
-cwv, loc, Tc = 'low', 'telfer', 301.56
-emitter = planck_law_body(Tc, Ephs)
-atm_dataset = atmospheric_dataset_new(cwv, loc)
+# Plot JV with Atmospheric Data as env
+ds = get_dataset_list()[0]
+emitter = planck_law_body(ds['Tskin'], Ephs)
+atm_dataset = atmospheric_dataset_new(ds['cwvstring'], ds['loc'], ds['Tskin'])
 combined_atmd = TRD_in_atmosphere(emitter, atm_dataset)
 
 rad_eff = 1
-Egs = [0.094]#np.arange(0.062, 0.2, 0.01) # np.arange(0.155, 0.21, 0.01)
+Egs = np.arange(0.062, 0.2, 0.01)  # np.arange(0.155, 0.21, 0.01) #[0.094]
 Eg_opt = 0.094
 for i, Eg in enumerate(Egs):
     # colour map around optimal Eg
@@ -40,16 +38,16 @@ for i, Eg in enumerate(Egs):
     # else:
     #     coli = (Eg-Eg_opt)/Egs[-1] + 0.5
     # col = cmap_coolwarm(coli)
-    col = 'darkorange' #cmap_plasma(i/len(Egs))
+
+    col = cmap_plasma(i/len(Egs))
     to_plot += [{'label':f'E$_g$ = {Eg:.3f}', 'color':col, 'linestyle':'-',
                  'TRD in atm': combined_atmd, 'Eg':Eg,
                  'nonrad':False, 'rad efficiency':rad_eff}]
 
-# Blackbody Env
-# Te_001 = Tc*0.01
-# Te_07 = Tc*0.7
+# Plot JV with Blackbody Env
 emitter_bb = planck_law_body(300, Ephs)
 Tes = [3]
+Eg_bb = 0.1
 linestyles = ['--']
 rad_effs = [1]
 for Te, linestyle in zip(Tes, linestyles):
@@ -58,17 +56,22 @@ for Te, linestyle in zip(Tes, linestyles):
     for ir, rad_eff in enumerate(rad_effs):
         # col = cmap_purple(0.2 + 0.8 * ir / len(rad_effs))
         col = ['black', 'red', 'blue'][ir]
-        to_plot += [{'label':f'{Te:.0f}K BB', 'color':col, 'linestyle':linestyle,
-                     'Eg':Eg, 'TRD in atm': combined_atmBB,
+        to_plot += [{'label':f'{Te:.0f}K BB, E$_g$={Eg_bb} eV', 'color':col, 'linestyle':linestyle,
+                     'Eg':Eg_bb, 'TRD in atm': combined_atmBB,
                      'nonrad':True, 'rad efficiency':rad_eff}]
 
-relative_change = False
-quadrant_focus = True
+
+
+# Plotting options
+relative_change = True  # plot change in J relative to Jsc as a function of V. True to check against Pusch et al 2019.
+quadrant_focus = True  # if True, only show TRD operation quadrant
+
 fig, axs = plt.subplots(1,2, layout='tight')
 Jsc_max = 0
 PD_max = 0
 Voc_max = 0
 
+# optimizer options for identifying max power point
 alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
 alg_de = pg.de(gen=50, ftol=1e-5)
 alg = alg_powell
@@ -86,7 +89,7 @@ for scheme in to_plot:
     pds = Js_mu*mus
     if relative_change:
         ys1 = Js_mu/Js_mu[-1]
-        xs1 = q*mus/(kb * Tc)
+        xs1 = q*mus/(kb * ds['Tskin'])
     else:
         xs1, ys1 = mus, Js_mu
 
@@ -95,8 +98,8 @@ for scheme in to_plot:
     axs[1].plot(xs2, ys2, scheme['linestyle'], color=i_colour)  # power density
 
     # Test optimizer over mu
-    # best_xs, best_pds = get_best_pd(TRD_in_atm_obj, args_to_opt = ['mu'], args_to_fix = {'Eg':Eg, 'cutoff_angle':None, 'eta_ext':rad_eff, 'consider_nonrad':True}, alg=alg)
-    # axs[1].plot(best_xs['mu'], best_pds[0], 'o', color=i_colour)
+    best_xs, best_pds = get_best_pd(TRD_in_atm_obj, args_to_opt = ['mu'], args_to_fix = {'Eg':Eg, 'cutoff_angle':None, 'eta_ext':rad_eff, 'consider_nonrad':True}, alg=alg)
+    axs[1].plot(best_xs['mu'], best_pds[0], 'o', color=i_colour)
 
     if Js_mu[-1] > Jsc_max:
         Jsc_max = Js_mu[-1]

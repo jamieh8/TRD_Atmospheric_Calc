@@ -8,16 +8,15 @@ from scipy.constants import sigma
 from scipy.optimize import minimize_scalar
 from scipy import interpolate, integrate
 from matplotlib.ticker import AutoMinorLocator, FixedLocator
+from matplotlib import font_manager
+import matplotlib.pyplot as plt
 
 def get_dataset_list():
     datasets = [
         #'darkorange', 'darkviolet', 'mediumseagreen'
-        {'loc': 'telfer', 'cwvstring': 'low', 'tcwv': 6.63, 'Tskin': 301.56, 'color': 'darkorange', 'symbol': 'o'},
-        {'loc': 'telfer', 'cwvstring': 'mid', 'tcwv': 34.45, 'Tskin': 306.43, 'color': 'darkviolet', 'symbol': 'o'},
-        {'loc': 'telfer', 'cwvstring': 'high', 'tcwv': 70.51, 'Tskin': 299.86, 'color': 'mediumseagreen', 'symbol': 'o'},
-        # {'loc': 'telfer', 'cwvstring': 'low', 'tcwv': 6.63, 'Tskin': 301.56, 'color': 'lightgreen', 'symbol': 'o'},
-        # {'loc': 'telfer', 'cwvstring': 'mid', 'tcwv': 34.45, 'Tskin': 306.43, 'color': 'forestgreen', 'symbol': 'o'},
-        # {'loc': 'telfer', 'cwvstring': 'high', 'tcwv': 70.51, 'Tskin': 299.86, 'color': 'darkgreen', 'symbol': 'o'},
+        {'loc': 'telfer', 'cwvstring': 'low', 'tcwv': 6.63, 'Tskin': 301.56, 'color': 'darkorange', 'symbol': 'o', 'Eg':0.094},
+        {'loc': 'telfer', 'cwvstring': 'mid', 'tcwv': 34.45, 'Tskin': 306.43, 'color': 'darkviolet', 'symbol': 'o', 'Eg':0.094},
+        {'loc': 'telfer', 'cwvstring': 'high', 'tcwv': 70.51, 'Tskin': 299.86, 'color': 'mediumseagreen', 'symbol': 'o', 'Eg':0.1},
 
         {'loc': 'california', 'cwvstring': 'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
         {'loc': 'california', 'cwvstring': 'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
@@ -62,7 +61,20 @@ def convert_from(array_in, units_in, units_out, corresponding_xs=None):
             return 1e-2 * array_in / (h*c/q)
             # [cm-1/m-1][Y/cm-1]/[J.s][m.s-1][eV/J] --> [Y/m-1]/[eV.m] --> [Y/eV]
 
+def set_font_opensans():
+    font_path = r'C:\Users\z5426944\AppData\Local\Microsoft\Windows\Fonts\OpenSans-Regular.ttf'
+    font_manager.fontManager.addfont(font_path)
 
+    # set regular open sans as the default font for plotting
+    plt.rcParams['font.family'] = 'sans-serif'
+    plt.rcParams['font.sans-serif'] = 'Open Sans'
+
+    # add open sans bold to font manager
+    font_path = r'C:\Users\z5426944\AppData\Local\Microsoft\Windows\Fonts\OpenSans-Bold.ttf'
+    font_manager.fontManager.addfont(font_path)
+
+
+# ---- Alternate x axis conversions ----
 def Eph_to_wl(x):
     return convert_from(x, units_in = 'photon energy [eV]', units_out = 'wavelength [um]')
 
@@ -102,23 +114,10 @@ def add_wn_ticks(ax):
     secax.set_xlabel('Wavenumber, $\\tilde{v}$ [cm$^{-1}$]')
     ax.minorticks_on()
     secax.minorticks_on()
+# ----
 
 
-def Ndot_boltzmann(Eg, T, mu): # particle flux density
-    # accurate for large band gaps / large negative bias
-    kT = kb*T/q # convert to eV to match units of Eg
-    N = ((2*np.pi)/(c**2*h**3))*np.exp((mu-Eg)/kT)*kT*(Eg**2 + 2*Eg*kT + 2*kT**2)
-    #eq 13 from Pusch et al 2019
-    return N*q**3
-
-def Ndot_downwellheaviside(Eg, Ephs, downwell_array):
-    get_heavisided = np.heaviside(Ephs - Eg, 0.5) * downwell_array
-    pflux = np.trapz(get_heavisided, Ephs)
-    return pflux
-
-
-
-class atmospheric_dataset:
+class atmospheric_dataset:  # class exists for historic reasons. use atmospheric_dataset_new, which inherits all important methods from this one
     def load_file_as_xarray(self, cwv):
         filename = os.path.join('simulations_telfer', f'telfer_australia_cwv{cwv}.txt')
         data = np.loadtxt(filename)
@@ -138,9 +137,18 @@ class atmospheric_dataset:
 
     def __init__(self, cwv, Tskin=300, spectral_fill_type='none'):
         '''
-        Loads in file as an xarray, with all original data values (i.e. no unit conversion), on initialization.
-        Calculate wavenumbers, wavelengths, and photon_energies. Save resulting 1D arrays as class properties.
+        atmospheric_dataset_new inherits all methods from the parent atmospheric_dataset class,
+        but with some modifications to the process of reading in the files in order to accomodate changes in later modelling results.
+        Use atmospheric_dataset_new class (this one is defined for historic reasons).
+
+        Loads in output from radiative transfer modelling as an xarray, with all original data values (i.e. no unit conversion), on initialization.
+        Defines methods to process this data -- such as retrieving the modelling arrays in a variety of units,
+        performing angular interpolation calculations, retrieving absorbed photon flux given some bandgap energy.
+
         :param cwv: column water vapour, should be 10, 24, or 54. Used to retrieve the correct file.
+        :param Tskin: skin temperature [K] corresponding to this condition
+        :param spectral_fill_type: only used in testing to check sensitivity to spectral range, if fill_in_downwelling() is called.
+        'none' to fill with 0s, anything else to fill with BB with skin temp. 'low' is defined but not used.
         '''
         self.org_xarray = self.load_file_as_xarray(cwv)
 
@@ -392,15 +400,6 @@ class atmospheric_dataset:
                     spec_phot_flux, Ephs = filled_arrays['Fphs'], filled_arrays['Ephs']
                 spec_pf_heavisided = spec_phot_flux * np.heaviside(Ephs - Eg, 0.5)
             else:
-                # spec_pf_heavisided = []
-                # for iEph, Eph in enumerate(Ephs):
-                #     if Eph >= Eg:
-                #         y, err = integrate.quad(self.Lph_costheta_sintheta, a=0, b=cutoff_angle, args=(iEph))
-                #         spec_pf_heavisided += [2 * np.pi * y]
-                #     else:
-                #         spec_pf_heavisided += [0]
-                # spec_pf_heavisided = np.array(spec_pf_heavisided)
-
                 # if cutoff angle is given, perform integral over interpolated angles
                 angle_array = np.arange(0,90.1,0.1)
                 spec_phot_flux = self.spectral_PDF_with_cutoffangle(angle_array, cutoff_angle)
@@ -415,6 +414,19 @@ class atmospheric_dataset:
 
 class atmospheric_dataset_new(atmospheric_dataset):
     def __init__(self, cwv, location, Tskin, spectral_fill_type='none', date='24oct'):
+        '''
+        Note that atmospheric_dataset_new is functionally equivalent to the parent atmospheric_dataset class,
+        but with some modifications to the process of reading in the files in order to accomodate changes in later modelling results.
+        Date should be '24oct' or '23dec'.
+
+        24oct files have smaller angular steps for angular restriction calculations.
+        23dec files have limited angular steps (0,53,70), but larger spectral coverage.
+
+        :param cwv: string, should be 'low', 'mid', 'high'
+        :param location: string, should be 'california', 'telfer', or 'tamanrasset'
+        :param Tskin: skin temp [K] associated to this condition.
+        :param spectral_fill_type: used to check sensitivty to spectral range.
+        '''
         self.location = location
         self.date = date
         super().__init__(cwv, Tskin, spectral_fill_type)
@@ -440,23 +452,6 @@ class atmospheric_dataset_new(atmospheric_dataset):
                                                'column': column_labels[1:]}, dims=['wavenumber', 'column'])
         return ds
 
-class atmospheric_dataset_inttest(atmospheric_dataset_new):
-    def __init__(self, cwv, location, Tskin, spectral_fill_type='none', max_Eph_fill = 1):
-        self.max_Eph_fill = max_Eph_fill
-        super().__init__(cwv, location, Tskin, spectral_fill_type)
-
-    def fill_in_downwelling(self):
-        Ephs_sofar = self.photon_energies
-        Fph_sofar = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
-        Ephs_after = np.arange(0.31 + 6.2*1e-5, 1, 6.2*1e-5)
-        if self.spectral_fill_type == 'none':
-            Fph_after = np.zeros(len(Ephs_after))
-        else:
-            planck_filler = planck_law_body(T=self.Tskin)
-            Fph_after = planck_filler.spectral_photon_flux(Eph=Ephs_after, mu=0, cutoff_angle=90)
-            Fph_after *= np.heaviside(self.max_Eph_fill - Ephs_after, 0.5)
-
-        return {'Ephs': np.append(Ephs_sofar, Ephs_after), 'Fphs': np.append(Fph_sofar, Fph_after)}
 
 class planck_law_body:
     def __init__(self, T=300, Ephs=np.arange(1e-6, 0.31, 0.0001)):

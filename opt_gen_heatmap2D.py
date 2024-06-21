@@ -3,6 +3,12 @@ from TRD_Atmospheric_Functions import *
 from matplotlib.colors import Normalize, LogNorm
 from matplotlib import ticker
 
+# This file is similar to opt_gen_linesweep1D.py, but steps over 2axis to generate a heatmap.
+# Each point on the heatmap can be the result of some optimization.
+
+# This file was used to generate the Bandgap & Radiative Efficiency heatmap,
+# where each point in the heatmap the result of some optimization over mu / operating voltage.
+
 # ----------------- Heatmap ----------------- #
 fig, axs = plt.subplots(1,1)
 # Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
@@ -53,17 +59,15 @@ norm_str = 'log power'
 alg = pg.scipy_optimize(method='Powell', tol=1e-7)
 # alg = pg.de(gen=50, ftol=1e-5)
 
-
-# case_dict = {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o', 'Eg':0.094}
-case_dict = {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o', 'Eg':0.094}
-# case_dict = {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o', 'Eg':0.1}
+case_dict = get_dataset_list()[1]
 
 atm_data = atmospheric_dataset_new(case_dict['cwvstring'], location=case_dict['loc'], Tskin=case_dict['Tskin'], date='23dec')
 emitter_planck = planck_law_body(case_dict['Tskin'], atm_data.photon_energies)
 combined_trd_env = TRD_in_atmosphere(emitter_planck, atm_data)
 case_label = case_dict['loc'] + ' ' + case_dict['cwvstring']
-filename = f'PD_{case_label}_etaextlog_-4_0_{eta_count}_Egs_{Eg_start}_02_{Eg_count}.csv'
-# filename = f'PD_{case_label}_cutoffangle_10_90_21_Egs_{Eg_start}_{Eg_end}_{Eg_count}.csv'
+
+filename = f'PD_heatmaps\PD_{case_label}_etaextlog_-4_0_{eta_count}_Egs_{Eg_start}_02_{Eg_count}.csv'
+# filename = f'PD_heatmaps\PD_{case_label}_cutoffangle_10_90_21_Egs_{Eg_start}_{Eg_end}_{Eg_count}.csv'
 
 
 # Tc, Te = 300, 290
@@ -74,37 +78,37 @@ filename = f'PD_{case_label}_etaextlog_-4_0_{eta_count}_Egs_{Eg_start}_02_{Eg_co
 # combined_trd_env = TRD_in_atmosphere(emitter, env)
 
 relative_to_etaext1 = False
-
+calculate_fresh = True
 
 # ^^^ setup
 # vvv run!
+if calculate_fresh:
+    # Generate new data
+    pds_2d = []
+    for y in y_sweep:
+        row = []
+        for x in x_sweep:
 
-# Generate new data
-pds_2d = []
-for y in y_sweep:
-    row = []
-    for x in x_sweep:
+            arg_f = {x_id_str:x, y_id_str:y}
+            if arg_fix_extra != None:
+                arg_f.update(arg_fix_extra)
 
-        arg_f = {x_id_str:x, y_id_str:y}
-        if arg_fix_extra != None:
-            arg_f.update(arg_fix_extra)
+            if len(args_to_opt) == 0:
+                pd = combined_trd_env.power_density(**arg_f)
+            else:
+                best_xs, best_pd = get_best_pd(combined_trd_env, args_to_opt=args_to_opt, args_to_fix=arg_f, alg=alg)
+                pd = best_pd[0]
+            # print(best_pd[0])
+            row += [pd]
+        pds_2d += [row]
 
-        if len(args_to_opt) == 0:
-            pd = combined_trd_env.power_density(**arg_f)
-        else:
-            best_xs, best_pd = get_best_pd(combined_trd_env, args_to_opt=args_to_opt, args_to_fix=arg_f, alg=alg)
-            pd = best_pd[0]
-        # print(best_pd[0])
-        row += [pd]
-    pds_2d += [row]
+    pds_2d = np.asarray(pds_2d)
 
-pds_2d = np.asarray(pds_2d)
-
-# # Save file
-np.savetxt(filename, pds_2d, delimiter = ',')
-
-# Import existing data
-# pds_2d = np.loadtxt(filename, delimiter=',', dtype=float)
+    # # Save file
+    np.savetxt(filename, pds_2d, delimiter = ',')
+else:
+    # Import existing data
+    pds_2d = np.loadtxt(filename, delimiter=',', dtype=float)
 
 
 # Test optimizer

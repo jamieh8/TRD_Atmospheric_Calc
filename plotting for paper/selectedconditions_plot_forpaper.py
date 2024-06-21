@@ -26,16 +26,36 @@ def add_location_annots(ax):
 
 datasets = get_dataset_list()[0:3]
 
+set_font_opensans()
 label_fontsize = 13
+plot_downwelling_separately = True
 
-fig = plt.figure(figsize=(15,7))
-gsmap = fig.add_gridspec(2, 3, width_ratios=[3,2,4], hspace=0.1, wspace=0.3)
-# gs2 = fig.add_gridspec(1, 3, width_ratios=[5,1,2], wspace=0.05)
+if plot_downwelling_separately:
+    fig = plt.figure(figsize=(8, 7))
+    cols_fig1 = 2
+    w_ratios_fig1 = [3,2]
+else:
+    fig = plt.figure(figsize=(15,7))
+    cols_fig1 = 3
+    w_ratios_fig1 = [3,2,4]
+
+gsmap = fig.add_gridspec(2, cols_fig1, width_ratios=w_ratios_fig1, hspace=0.1, wspace=0.3)
 
 ax_mapjan = fig.add_subplot(gsmap[0,0], projection=ccrs.PlateCarree())
 ax_mapjune = fig.add_subplot(gsmap[1,0], projection=ccrs.PlateCarree())
 map_axs = [ax_mapjan, ax_mapjune]
 
+
+gs1 = fig.add_gridspec(2, cols_fig1, width_ratios=w_ratios_fig1, wspace=0.3, hspace=0.5)
+ax_hist = fig.add_subplot(gs1[0,1])
+ax_scatter = fig.add_subplot(gs1[1,1])
+# add rest of subplots
+if plot_downwelling_separately:
+    fig2, ax_dwf = plt.subplots(1, layout='tight')
+    axs = [ax_hist, ax_scatter]
+else:
+    ax_dwf = fig.add_subplot(gs1[:,2])
+    axs = [ax_hist, ax_scatter, ax_dwf]
 
 
 # TCWV map
@@ -69,7 +89,7 @@ map_axs[0].text(x=-180+5,y=-90+3,s='JAN 0000 UTC', ha='left', va='bottom', color
 map_axs[1].text(x=-180+5,y=-90+3,s='JUNE 0000 UTC', ha='left', va='bottom', color='white', bbox = {'color':'black', 'pad':1})
 
 fig.subplots_adjust(left=0.05, right=0.95, bottom=0.15, top=0.9)
-cb_ax = fig.add_axes([0.05, 0.1, 0.25, 0.02])  # x0, y0, width, height
+cb_ax = fig.add_axes([0.05, 0.1, 0.47, 0.02])  # x0, y0, width, height
 
 cbar = fig.colorbar(hmap, cax=cb_ax, orientation='horizontal')
 cbar.ax.set_xlabel('Decadal mean TCWV [mm]', fontsize=label_fontsize)
@@ -78,15 +98,9 @@ cbar.ax.set_xlim([0, 66])
 
 
 
-# add rest of subplots
-gs1 = fig.add_gridspec(2, 3, width_ratios=[3,2,4], wspace=0.3, hspace=0.5)
-ax_hist = fig.add_subplot(gs1[0,1])
-ax_scatter = fig.add_subplot(gs1[1,1])
-ax_dwf = fig.add_subplot(gs1[:,2])
-axs = [ax_hist, ax_scatter, ax_dwf]
 
 # Histogram and scatter plot
-copied_data = np.loadtxt('histogram-plot-data.csv', skiprows=1, delimiter=',')
+copied_data = np.loadtxt('../histogram-plot-data.csv', skiprows=1, delimiter=',')
 edges = np.arange(0,copied_data[-1,0]+1,1)
 ax_hist.stairs(copied_data[:,1], edges=edges, fill=True, fc='silver')
 
@@ -139,6 +153,7 @@ ax_dwf.set_yscale('log')
 wl_ax = add_wl_ticks(ax_dwf, fontsize=label_fontsize)
 # add_wn_ticks(ax)
 
+
 for ax in [cb_ax, ax_scatter, ax_hist, ax_dwf, wl_ax]:
     ax.tick_params(axis='x', labelsize=label_fontsize)
     ax.tick_params(axis='y', labelsize=label_fontsize)
@@ -146,11 +161,11 @@ for ax in [cb_ax, ax_scatter, ax_hist, ax_dwf, wl_ax]:
 
 
 # adding a, b, c, d labelling
-# map_axs[0]. set_title('a)', loc='left', fontsize=15, fontweight='bold', y=1.05, x=-0.1)
-# for letter, ax in zip(['b','c','d'], axs):
-#     ax.set_title(letter+')', loc='left', fontsize=15, fontweight='bold', y=1.05, x=-0.1)
+map_axs[0]. set_title('a)', loc='left', fontweight='bold', fontsize=20, y=1.05, x=-0.1)
+for letter, ax in zip(['b','c','d'], axs):
+    ax.set_title(letter+')', loc='left', fontsize=20, fontweight='bold', y=1.05, x=-0.25)
 
 
-plt.savefig(r'C:\Users\z5426944\OneDrive - UNSW\Documents\Thermoradiative Diode\Figures\Figs Final\SelectedConditions_Fig.eps',bbox_inches='tight')
+# plt.savefig(r'C:\Users\z5426944\OneDrive - UNSW\Documents\Thermoradiative Diode\Figures\Figs Final\SelectedConditions_Fig.eps',bbox_inches='tight')
 
 plt.show()

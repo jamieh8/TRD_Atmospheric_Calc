@@ -1,6 +1,14 @@
 import matplotlib.pyplot as plt
 from TRD_Atmospheric_Functions import *
 
+# This file steps through some x axis (defined by 'arg_sweep_str', with values given by 'x_vals_sweep') and
+# runs an optimization at each point. The values to opt at each point are defined by 'args_to_opt'.
+# Values / args that are constant (i.e. not to be optimized) are set by 'arg_fix_extra'
+
+# This file was used, for example, to produce the angular restriction plot (max power vs cutoff angle).
+# In that case, 'cutoff_angle' is the 'arg_sweep_str', and 'mu' (or V) is to be optimized at each angle to find the MPP.
+# If the results of this optimization are saved (save_results = True), they can be plotted in 'cutoff_angle_plotting_forpaper.py'
+
 # ----------------- Line/Sweep Optimization Plotter -----------------
 
 Ephs = np.arange(1e-6, 0.31, 0.0001)  # [eV]
@@ -43,54 +51,35 @@ to_plot = []
 
 
 # Setup cases to plot
-# old_file_dicts = [
-#     {'cwv':10, 'Tc':296.724, 'col':'deeppink', 'Eg':0.094, 'new':False},
-#     {'cwv':24, 'Tc':304.868, 'col':'steelblue', 'Eg':0.094, 'new':False},
-#     {'cwv':54, 'Tc':303.512, 'col':'seagreen', 'Eg':0.1, 'new':False}
-# ]
 
-new_file_dicts = [
-    {'loc':'telfer', 'cwvstring':'low', 'tcwv':6.63, 'Tskin':301.56, 'color':'darkorange', 'symbol':'o', 'Eg':0.094},
-    {'loc':'telfer', 'cwvstring':'mid', 'tcwv':34.45, 'Tskin':306.43,'color':'darkviolet','symbol':'o', 'Eg':0.094},
-    {'loc':'telfer', 'cwvstring':'high', 'tcwv':70.51, 'Tskin':299.86, 'color':'teal','symbol':'o', 'Eg':0.101},
-
-    # {'loc':'california', 'cwvstring':'low', 'tcwv': 5.32, 'Tskin': 276.298, 'color': 'pink', 'symbol': 's'},
-    # {'loc':'california', 'cwvstring':'mid', 'tcwv': 17.21, 'Tskin': 295.68, 'color': 'hotpink', 'symbol': 's'},
-    # {'loc':'california', 'cwvstring':'high', 'tcwv': 40.32, 'Tskin': 299.231, 'color': 'crimson', 'symbol': 's'},
-    #
-    # {'loc':'tamanrasset', 'cwvstring':'low', 'tcwv':2.87, 'Tskin':287.31, 'color':'lightblue', 'symbol':'^'},
-    # {'loc':'tamanrasset', 'cwvstring':'mid', 'tcwv':19.97, 'Tskin':301.828, 'color':'royalblue', 'symbol':'^'},
-    # {'loc':'tamanrasset', 'cwvstring':'high', 'tcwv':37.91, 'Tskin':299.096, 'color':'darkblue', 'symbol':'^'}
-    ]
-
-# for AD_dict in new_file_dicts:
-#     try:
-#         Eg = AD_dict['Eg']
-#     except:
-#         Eg = 0.094
-#     cwv = AD_dict['tcwv']
-#     cwv_str = AD_dict['cwvstring']
-#     loc_str = AD_dict['loc']
-#     atm_data = atmospheric_dataset_new(cwv_str, loc_str)
-#     TRD = planck_law_body(T=AD_dict['Tskin'], Ephs=atm_data.photon_energies)
-#     comb_TRDenv = TRD_in_atmosphere(TRD, atm_data)
-#     if fix_Eg:
-#         arg_fix_extra.update({'Eg':Eg})  #<--- comment out if Eg is to be optimized
-#     to_plot += [{'TRD in env':comb_TRDenv, 'label':f'{loc_str} {cwv_str}', 'colour':AD_dict['color'], 'arg_fix_extra': arg_fix_extra}]
+new_file_dicts = [get_dataset_list()[0]]
+for AD_dict in new_file_dicts:
+    try:
+        Eg = AD_dict['Eg']
+    except:
+        Eg = 0.094
+    cwv_str = AD_dict['cwvstring']
+    loc_str = AD_dict['loc']
+    atm_data = atmospheric_dataset_new(cwv=cwv_str, location=loc_str, Tskin=AD_dict['Tskin'])
+    TRD = planck_law_body(T=AD_dict['Tskin'], Ephs=atm_data.photon_energies)
+    comb_TRDenv = TRD_in_atmosphere(TRD, atm_data)
+    if fix_Eg:
+        arg_fix_extra.update({'Eg':Eg})  #<--- comment out if Eg is to be optimized as well
+    to_plot += [{'TRD in env':comb_TRDenv, 'label':f'{loc_str} {cwv_str}', 'colour':AD_dict['color'], 'arg_fix_extra': arg_fix_extra}]
 
 
-
-
-TRD_300K = planck_law_body(T=300, Ephs=Ephs)
-for Te, colT in zip([3,200],['black','dimgrey']):
-    env_T = planck_law_body(T=Te, Ephs=Ephs)
-    comb_TRDenv = TRD_in_atmosphere(TRD_300K, env_T)
-    to_plot += [{'TRD in env':comb_TRDenv, 'label':f'300K/{Te}K, E$_g$=0.02', 'colour':colT, 'arg_fix_extra': {'Eg':0.02}}]
+# TRD_300K = planck_law_body(T=300, Ephs=Ephs)
+# for Te, colT in zip([3,200],['black','dimgrey']):
+#     env_T = planck_law_body(T=Te, Ephs=Ephs)
+#     comb_TRDenv = TRD_in_atmosphere(TRD_300K, env_T)
+#     to_plot += [{'TRD in env':comb_TRDenv, 'label':f'300K/{Te}K, E$_g$=0.02', 'colour':colT, 'arg_fix_extra': {'Eg':0.02}}]
 
 
 # Define subplots based on optimization
+# figure will show power density obtained, plus values output from optimization (ex: V at which MPP was found)
 fig, axs = plt.subplots(1,len(args_to_opt)+1, layout='tight')
-relative_change = True
+relative_change = True  # plot actual power density or relative to the last value in the array (90 deg cutoff / full hemisphere for angle sweep).
+save_results = False
 
 for case in to_plot:
     save_array = []
@@ -132,14 +121,15 @@ for case in to_plot:
     # axs[0].plot(x_vals_sweep, max_pds_90, '--', c=case['colour'])
     # axs[args_to_opt.index('cutoff_angle')+1].plot(x_vals_sweep, len(x_vals_sweep)*[90],'--', c=case['colour'])
     # axs[args_to_opt.index('mu')+1].plot(x_vals_sweep, mus_90, '--', c=case['colour'])
-    lbl = case['label']
-    filename = f'{lbl}_sweep_{arg_sweep_str}.csv'
-    # np.savetxt(fname = filename, X = np.array(save_array), delimiter=',')
+
+    if save_results:
+        lbl = case['label']
+        filename = f'{lbl}_sweep_{arg_sweep_str}.csv'
+        np.savetxt(fname = filename, X = np.array(save_array), delimiter=',')
 
 
 pd_ax = axs[0]
 if relative_change:
-    # pd_ax.set_ylabel(f'Relative Power Density, P/P({x_vals_sweep[-1]:.0f})')
     pd_ax.set_ylabel('Relative Power Density, P($\\theta_c$)/P($90^\circ$)')
 else:
     pd_ax.set_ylabel(r'Power Density [W.m$^{-2}$]')
