@@ -7,7 +7,7 @@ from solcore.constants import kb, c, h, q
 from scipy.constants import sigma
 from scipy.optimize import minimize_scalar
 from scipy import interpolate, integrate
-from matplotlib.ticker import AutoMinorLocator, FixedLocator
+from matplotlib.ticker import FixedLocator
 from matplotlib import font_manager
 import matplotlib.pyplot as plt
 
@@ -345,28 +345,6 @@ class atmospheric_dataset:  # class exists for historic reasons. use atmospheric
         return spectral_photon_flux  # [s-1.m-2/eV]
 
 
-    def Lph_costheta_sintheta(self, theta_deg, idx_Eph):
-        theta = np.radians(theta_deg)
-
-        # index of insertion for theta
-        angles_known_rad = np.radians(self.zenith_angles)
-        i_insert = np.searchsorted(angles_known_rad, theta)  # return index of insertion to maintain order
-        if i_insert >= len(angles_known_rad):
-            i_insert = len(angles_known_rad) - 1
-
-        it1, it2 = i_insert - 1, i_insert
-        theta1, theta2 = angles_known_rad[it1], angles_known_rad[it2]
-        angle_multiplier = (1 - np.cos(theta) / np.cos(theta1)) / (1 / np.cos(theta2) - 1 / np.cos(theta1))
-
-        L_2D = self.get_Lph_2D()  # 2D array of L_ph vals, containing directional spectral photon flux [s-1.m-2.sr-1/eV] at known angles
-        L_t1 = L_2D[it1][idx_Eph]
-        L_t2 = L_2D[it2][idx_Eph]
-
-        L_costheta = (L_t2 - L_t1) * angle_multiplier + L_t1 * np.cos(theta)
-
-        return L_costheta * np.sin(theta)
-
-
     def fill_in_downwelling(self):
         Ephs_sofar = self.photon_energies
         Fph_sofar = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
@@ -375,7 +353,7 @@ class atmospheric_dataset:  # class exists for historic reasons. use atmospheric
             Fph_after = np.zeros(len(Ephs_after))
         else:
             planck_filler = planck_law_body(T=self.Tskin)
-            Fph_after = planck_filler.spectral_photon_flux(Eph=Ephs_after, mu=0, cutoff_angle=90)
+            Fph_after = planck_filler.spectral_photon_flux(x=Ephs_after, mu=0, cutoff_angle=90, spectral_units='photon energy [eV]')
 
             # from Helen: "moderately" transmissive window from 0.32 - 0.36 eV
             if self.spectral_fill_type == 'low':
@@ -459,24 +437,40 @@ class planck_law_body:
         self.kT_eV = kb * T / q  # [eV]
         self.Ephs = Ephs
 
-    def angle_spectral_photon_flux(self, Eph, mu):
+    def angle_spectral_photon_flux(self, x, mu, spectral_units = 'photon energy [eV]'):
         '''
-        :param Eph: Eph in eV
-        :param mu: mu in eV
-        :return: spectral, directional photon flux - value, or array of values, in [s-1.m-2.sr-1/eV]
+        :param x: spectral value, ex: Eph in [eV], or wavelength in [um]
+        :param mu: Fermi level splitting, in eV
+        :param spectral_units: string specifying spectral units of x. default is 'photon energy [eV]', can also be 'wavelength [um]'.
+        :return: spectral, directional photon flux, Lph - value, or array of values, in [s-1.m-2.sr-1/eV] (or replace eV with designed spectral unit)
         '''
-        # [s-1.m-2 / sr.eV]
-        return (2 / (c**2 * (h/q)**3)) * Eph**2 / (np.exp((Eph - mu) / self.kT_eV) - 1)
 
-    def spectral_photon_flux(self, Eph, mu=0, cutoff_angle = 90):
+        h_eV = h/q
+
+        if spectral_units == 'wavelength [um]':
+            lambda_m = x * 1e-6  # convert um to m, SI units
+            phot_flux_per_m =  (2 * c / lambda_m**4) * 1 / (np.exp((h_eV*c/lambda_m - mu)/self.kT_eV))
+            return phot_flux_per_m * 1e-6  # convert to [/um]
+
+        elif spectral_units == 'photon energy [eV]':
+            # photon energy, [eV] is the default
+            return (2 / (c**2 * (h_eV)**3)) * x**2 / (np.exp((x - mu) / self.kT_eV) - 1)
+
+        else:
+            print('Spectral unit string not recognized -- treating x as photon energy in [eV]')
+            return (2 / (c ** 2 * (h_eV) ** 3)) * x ** 2 / (np.exp((x - mu) / self.kT_eV) - 1)
+
+    def spectral_photon_flux(self, x, mu=0, cutoff_angle = 90, spectral_units = 'photon energy [eV]'):
         '''
-        :param Eph: Photon energy/energies, in [eV]
+        :param x: spectral value, ex: Eph in [eV], or wavelength in [um]
         :param mu: Fermi level splitting, in [eV]
         :param cutoff_angle: Angle between 0 and 90 [degrees], past which no emission occurs.
-        :return: Spectral photon flux - value or array of values in [s-1.m-2/eV]
+        :param spectral_units: string specifying spectral units of x. default is 'photon energy [eV]', can also be 'wavelength [um]'.
+        :return: Spectral photon flux, Fph - value or array of values in [s-1.m-2/eV], or [s-1.m-2/um]
         '''
         if cutoff_angle == None:
             cutoff_angle = 90
+
         # [s-1.m-2.eV-1] = [s-1.m-2.sr-1.eV-1]*[sr] -- must integrate over solid angle
         # d(Omega) = sin(theta) * d(theta) * d(phi), element solid angle for int
         # angle_spectral_photon_flux is independent of theta, can be taken out.
@@ -485,7 +479,8 @@ class planck_law_body:
         # Spectral_PDF = 2pi * Directional_Spectral_PDF * \int_0^theta_cutoff cos(theta) sin(theta) d(theta)
         # with \int_0^theta_cutoff cos(theta) sin(theta) d(theta) = [sin^2(theta)/2]_0^theta_cutoff = sin^2(theta_cutoff)/2
         int_sinz_cosz = np.sin(np.radians(cutoff_angle))**2 / 2
-        return 2*np.pi * self.angle_spectral_photon_flux(Eph, mu) * int_sinz_cosz
+
+        return 2*np.pi * self.angle_spectral_photon_flux(x=x, mu=mu, spectral_units=spectral_units) * int_sinz_cosz
 
     def spectral_irradiance(self, Eph, mu=0, cutoff_angle=90):
         '''
@@ -522,6 +517,79 @@ class planck_law_body:
 
         return Ndot
 
+    def retrieve_Ndot(self, EQE, cutoff_angle=90, mu=0):
+        # get EQE as defined internally -- i.e. not "feeding in" x spectral values
+        EQExy = EQE.get_spec_EQE()
+        xs = EQExy['x']
+        su = EQE.spec_xs['spec units']
+
+        phot_flux = self.spectral_photon_flux(xs, mu, cutoff_angle, spectral_units=su)
+        phot_flux_EQE = EQExy['EQE(x)'] * phot_flux
+        integral_over_Eph = np.trapz(phot_flux_EQE, xs)
+        Ndot = integral_over_Eph
+
+        return Ndot
+
+
+class diode_EQE:
+    def __init__(self, spec_type='heaviside', angle_type='lambertian',  spec_xs=None, Eg=None,
+                 spec_EQE=None, angle_EQE=None):
+        '''
+
+        :param spec_type: 'heaviside' or 'measured'
+        :param angle_type:
+        :param Eg: in [eV], used if spec_type is heaviside
+        :param spec_xs: dict containing 'spec x' and 'spec units'
+        :param spec_EQE: between 0 and 1, used if spec_type is measured
+        :param angle_EQE:
+        '''
+        self.spec_type = spec_type
+        self.angle_type = angle_type
+        self.spec_xs = spec_xs
+
+        if spec_type == 'heaviside':
+            self.Eg = Eg
+
+        elif spec_type == 'measured':
+            meas_spec_EQE = spec_EQE
+            self.meas_spec_EQE = meas_spec_EQE
+
+        # if angle_type == 'lambertian':
+
+    def get_spec_EQE(self, x=None, spectral_units=None):
+        '''
+        :param x: spectral x value, eg: Eg [eV] or lambda [um]. If provided, the EQE is calculated/interpolated at these values. If not given, the spec_xs used to initialize the class are used instead.
+        :param spectral_units: string specifying spectral units of x, if x is provided. ex: 'photon energy [eV]' or 'wavelength [um]'.
+        :return: dictionary with entries 'x' and 'EQE(x)'
+        '''
+        if self.spec_type == 'heaviside':
+            if x == None:
+                x = self.spec_xs['spec x']
+                spectral_units = self.spec_xs['spec units']
+
+            if spectral_units != 'photon energy [eV]':
+                x_c = convert_from(x, spectral_units, 'photon energy [eV]')
+            else:
+                x_c = x
+            EQEx = np.heaviside(x_c-self.Eg, 0.5)
+
+        elif self.spec_type == 'measured':
+            if x == None:
+                # if no xs are specified, just return internal EQE with x unchanged
+                EQEx = self.meas_spec_EQE
+                x = self.spec_xs['spec x']
+            else:
+                if spectral_units != self.spec_xs['spec units']:
+                    x_c = convert_from(x, spectral_units, self.spec_xs['spec units'])
+                else:
+                    x_c = x
+                EQEx = np.interp(x_c, self.spec_xs['spec x'], self.meas_spec_EQE)
+
+        return {'x':x, 'EQE(x)':EQEx}
+
+    def get_angle_EQE(self, theta):
+        if self.angle_type == 'lambertian':
+            return np.cos(theta)
 
 class TRD_in_atmosphere:
     def __init__(self, TRD_body, atmosphere, out_int_method = 'quad'):
