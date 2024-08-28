@@ -376,12 +376,12 @@ class atmospheric_dataset:  # class exists for historic reasons. use atmospheric
                 else:
                     filled_arrays = self.fill_in_downwelling()
                     spec_phot_flux, Ephs = filled_arrays['Fphs'], filled_arrays['Ephs']
-                spec_pf_heavisided = spec_phot_flux * np.heaviside(Ephs - Eg, 0.5)
+
             else:
                 # if cutoff angle is given, perform integral over interpolated angles
                 angle_array = np.arange(0,90.1,0.1)
                 spec_phot_flux = self.spectral_PDF_with_cutoffangle(angle_array, cutoff_angle)
-                spec_pf_heavisided = spec_phot_flux*np.heaviside(Ephs - Eg, 0.5)
+            spec_pf_heavisided = spec_phot_flux*np.heaviside(Ephs - Eg, 0.5)
 
             int_over_Eph = np.trapz(spec_pf_heavisided, Ephs)
 
@@ -389,6 +389,31 @@ class atmospheric_dataset:  # class exists for historic reasons. use atmospheric
 
             return int_over_Eph
 
+    def retrieve_Ndot(self, EQE, cutoff_angle=None):
+            Ephs = self.photon_energies
+            su = 'photon energy [eV]'
+            # get EQE at the modelled downwelling spectral values
+            EQExy = EQE.get_spec_EQE(x=Ephs, spectral_units=su)
+
+            # get spectral photon flux [s-1.m-2/eV]
+            if cutoff_angle == None:
+                # if cutoff_angle is None, use the diffusivity approximation
+                if self.spectral_fill_type == 'none':
+                    spec_phot_flux = self.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV', col_name='downwelling_flux')
+                else:
+                    filled_arrays = self.fill_in_downwelling()
+                    spec_phot_flux, Ephs = filled_arrays['Fphs'], filled_arrays['Ephs']
+            else:
+                # if cutoff angle is given, perform integral over interpolated angles
+                angle_array = np.arange(0,90.1,0.1)
+                spec_phot_flux = self.spectral_PDF_with_cutoffangle(angle_array, cutoff_angle)
+
+            # multiply and integrate
+            phot_flux_EQE = EQExy['EQE(x)'] * spec_phot_flux
+            integral_over_Eph = np.trapz(phot_flux_EQE, Ephs)
+            Ndot = integral_over_Eph
+
+            return Ndot
 
 class atmospheric_dataset_new(atmospheric_dataset):
     def __init__(self, cwv, location, Tskin, spectral_fill_type='none', date='24oct'):
@@ -517,44 +542,134 @@ class planck_law_body:
 
         return Ndot
 
-    def retrieve_Ndot(self, EQE, cutoff_angle=90, mu=0):
+    def retrieve_Ndot(self, EQE, mu=0):
         # get EQE as defined internally -- i.e. not "feeding in" x spectral values
         EQExy = EQE.get_spec_EQE()
         xs = EQExy['x']
         su = EQE.spec_xs['spec units']
 
-        phot_flux = self.spectral_photon_flux(xs, mu, cutoff_angle, spectral_units=su)
-        phot_flux_EQE = EQExy['EQE(x)'] * phot_flux
-        integral_over_Eph = np.trapz(phot_flux_EQE, xs)
-        Ndot = integral_over_Eph
+        if EQE.angle_type == 'lambertian with cutoff':
+            # if simple, "step" cutoff is used (incl. full hemisphere), the analytical solution for integration across angles is implemented in spectral_photon_flux
+            Fph_phot_flux = self.spectral_photon_flux(xs, mu, cutoff_angle=EQE.cutoff_angle_deg, spectral_units=su)  #[s-1.m-2/su]
+        else:
+            # if the angular weighing is not a step function ('cutoff'), the integral is performed numerically over Lph
+            # get spectral, directional photon flux Lph(Eph) -- no theta dependence for Planck's law
+            Lph = self.angle_spectral_photon_flux(xs, mu, spectral_units=su)  # [s-1.m-2.sr-1/su]
+
+            # get angular weights, as defined internally
+            angular_weight_xy = EQE.get_angle_weight()
+            weight_theta = angular_weight_xy['weight(b)']
+            betas = angular_weight_xy['beta']
+
+            int_over_beta = np.trapz(weight_theta, betas)
+            Fph_phot_flux = 2 * np.pi * Lph * int_over_beta
+
+        Fph_EQE = EQExy['EQE(x)'] * Fph_phot_flux
+        integral_over_Eph = np.trapz(Fph_EQE, xs)
+        Ndot = integral_over_Eph  # [s-1.m-2]
+
+        return Ndot
+
+
+class mathemetica_style_body:
+    def __init__(self, T=300, Ephs=np.arange(1e-6, 0.31, 0.0001), nL=3.3, R_normal=0.286):
+        self.T = T
+        self.kT_eV = kb * T / q  # [eV]
+        self.Ephs = Ephs
+        self.nL = nL
+        self.R_normal = R_normal
+
+    def Lph_S4(self, Eph, beta, EQE_Eph, mu):
+        '''
+        :param Eph: Photon energy (energies)
+        :param beta: Angle of emission, beta, in radians
+        :param EQE_Eph: EQE(s) corresponding to Eph
+        :param mu: Bias/quasi Fermi level splitting in [eV]
+        :return: Lph, spectral directional photon flux emitted, in [s-1.m-2.sr-1/eV]. Calculated from eq S4 of Nielsen et al 2022 supplementary / Andreas's Mathematica code
+        '''
+        prefac = q**3 / (c**2 * h**3)
+        # ^ prefac differs by factor of 2pi * q from the one in Mathematica code.. the one in Mathematica directly calculates current (extra q) instead of photon flux density.
+        # 2pi factor is from integration across the azimuth angle.. this Lph is in [s-1.m-2.sr-1/eV] -- the 2pi factor appears in the Ndot calculation, where we perform angualr integration [sr=rad*rad=zenith(beta) * azimuth]
+        explog = 1 - np.exp( np.log(1-EQE_Eph/(1-self.R_normal)) / np.cos(beta))
+        return  prefac * Eph**2  * np.cos(beta) * self.nL**2 * explog / ( np.exp((Eph-mu)/self.kT_eV) - 1 )
+
+    def retrieve_Ndot(self, EQE, mu=0):
+        # the integral is performed numerically over Lph
+        # get EQE as defined internally, in the EQE obj
+        EQExy = EQE.get_spec_EQE()
+        xs = EQExy['x']
+        su = EQE.spec_xs['spec units']
+        EQEys = EQExy['EQE(x)']
+        if su == 'photon energy [eV]':
+            Ephs = xs
+        else:
+            Ephs = convert_from(xs, su, 'photon energy [eV]')
+
+        # spectral, directional photon flux Lph(Eph) depends on beta, the angle of emission
+        # get angular weights, as defined internally
+        angular_weight_xy = EQE.get_angle_weight()
+        weight_beta = angular_weight_xy['weight(b)']  # if 'escape prob - isotropic' type: sin(beta)*P(beta)
+        betas = angular_weight_xy['beta']  # assuming beta in radians
+
+        # get Lph for these Eph and beta values (xs = Ephs)
+        integrated_over_Eph = []
+        for beta in betas:
+            spectral_Lph = self.Lph_S4(Eph = Ephs, beta = beta, EQE_Eph = EQEys, mu = mu)
+            # spectral Lph [s-1.m-2.sr-1/eV] for a given beta, angle
+            integrated_over_Eph += [abs(np.trapz(spectral_Lph, Ephs))]  # abs value because if xs originally are in wavelength, integral runs in opp direction and trapz returns negative value
+
+        # integrate over beta
+        integrated_over_Eph_beta = np.trapz(integrated_over_Eph * weight_beta, betas)
+
+        Ndot = 2 * np.pi * integrated_over_Eph_beta # [s-1.m-2] . 2pi from integration over azimuth angle
 
         return Ndot
 
 
 class diode_EQE:
-    def __init__(self, spec_type='heaviside', angle_type='lambertian',  spec_xs=None, Eg=None,
-                 spec_EQE=None, angle_EQE=None):
+    def __init__(self, spec_type='heaviside',  spec_xs=None, Eg=None, spec_EQE=None,
+                 angle_type='lambertian with cutoff', cutoff_angle=90, betas=None, escape_prob=None,
+                 resistance=None, area=1e-7):
         '''
+        An instance of this class corresponds to a particular diode, with some EQE and some angular escape probability resulting from its optics (eg lens geometry).
 
         :param spec_type: 'heaviside' or 'measured'
-        :param angle_type:
         :param Eg: in [eV], used if spec_type is heaviside
         :param spec_xs: dict containing 'spec x' and 'spec units'
-        :param spec_EQE: between 0 and 1, used if spec_type is measured
-        :param angle_EQE:
+        :param spec_EQE: array of EQE values corresponding to spectral xs, between 0 and 1. Used if spec_type is measured.
+        :param angle_type: 'lambertian with cutoff' or 'escape prob'
+        :param cutoff_angle: cutoff angle, in degrees
+        :param betas: array of betas (emission angles), in radians
+        :param escape_prob: array of escape probability values, corresponding to betas. between 0 and 1.
+        :param resistance: dynamic resistance of the diode, in ohms
+        :param area: area of the diode, in m2
         '''
+
+        self.resistance = resistance
+        self.area = area
+
         self.spec_type = spec_type
         self.angle_type = angle_type
         self.spec_xs = spec_xs
 
         if spec_type == 'heaviside':
             self.Eg = Eg
+            if spec_xs == None:
+                self.spec_xs = {'spec x':np.arange(1e-6, 0.31, 0.0001), 'spec units':'photon energy [eV]'}
 
         elif spec_type == 'measured':
-            meas_spec_EQE = spec_EQE
-            self.meas_spec_EQE = meas_spec_EQE
+            self.meas_spec_EQE = spec_EQE
 
-        # if angle_type == 'lambertian':
+        if angle_type == 'lambertian with cutoff' or angle_type == 'lambertian with cutoff old':
+            self.cutoff_angle_deg = cutoff_angle
+            self.cutoff_angle_rad = np.radians(cutoff_angle)
+            if type(betas) == type(None):
+                self.betas = np.linspace(0, np.pi/2, 100)
+
+        elif angle_type == 'escape probability - isotropic' or angle_type == 'escape probability - Lambertian':
+            self.betas = betas
+            self.escape_prob = escape_prob
+
 
     def get_spec_EQE(self, x=None, spectral_units=None):
         '''
@@ -562,8 +677,10 @@ class diode_EQE:
         :param spectral_units: string specifying spectral units of x, if x is provided. ex: 'photon energy [eV]' or 'wavelength [um]'.
         :return: dictionary with entries 'x' and 'EQE(x)'
         '''
+
         if self.spec_type == 'heaviside':
-            if x == None:
+            if type(x) == type(None):
+                # if no xs are specified, return internal EQE with x unchanged
                 x = self.spec_xs['spec x']
                 spectral_units = self.spec_xs['spec units']
 
@@ -571,25 +688,52 @@ class diode_EQE:
                 x_c = convert_from(x, spectral_units, 'photon energy [eV]')
             else:
                 x_c = x
+
             EQEx = np.heaviside(x_c-self.Eg, 0.5)
 
         elif self.spec_type == 'measured':
-            if x == None:
+            if type(x) == type(None):
                 # if no xs are specified, just return internal EQE with x unchanged
                 EQEx = self.meas_spec_EQE
                 x = self.spec_xs['spec x']
             else:
+                # check units. convert if necessary. (x_c = x converted)
                 if spectral_units != self.spec_xs['spec units']:
                     x_c = convert_from(x, spectral_units, self.spec_xs['spec units'])
                 else:
                     x_c = x
-                EQEx = np.interp(x_c, self.spec_xs['spec x'], self.meas_spec_EQE)
+                # interpolate EQE to get value at that spectral x.
+                EQEx = np.interp(x_c, self.spec_xs['spec x'], self.meas_spec_EQE, left=0, right=0)
 
         return {'x':x, 'EQE(x)':EQEx}
 
-    def get_angle_EQE(self, theta):
-        if self.angle_type == 'lambertian':
-            return np.cos(theta)
+    def get_angle_weight(self, beta=None):
+        '''
+        :param beta: array (or single value) of emission angles, in radians
+        :return: dict with keys 'beta' and 'weight(b)', corresponding to beta angles in rad and weight of each angle
+        '''
+
+        if self.angle_type == 'lambertian with cutoff':
+            Wb = np.cos(beta) * np.sin(beta) * np.heaviside(self.cutoff_angle_rad - beta, 0.5)
+            # ^ won't be used if emitter/env is a blackbody -- Lph doesn't depend on angle, so analytical solution is used
+
+        elif self.angle_type == 'escape probability - Lambertian' or self.angle_type == 'escape probability - isotropic':
+            if type(beta) == type(None):
+                # if no betas are specified, return internal array
+                escape_prob = self.escape_prob
+                beta = self.betas
+            else:
+                # if betas are specified, interpolate
+                escape_prob = np.interp(beta, self.betas, self.escape_prob, left=0, right=0)
+
+            if self.angle_type == 'escape probability - Lambertian':
+                Wb = escape_prob * np.sin(beta) * np.cos(beta)  # assuming Lambertian emission (i.e. weighted by cos(beta))
+            elif self.angle_type == 'escape probability - isotropic':
+                Wb = escape_prob * np.sin(beta)  # assuming isotropic emission
+            # ^ in both cases, sin(beta) comes from integration over solid angle (dOmega = sin(zenith) dZenith dAzimuth)
+
+        return {'beta': beta, 'weight(b)': Wb}
+
 
 class TRD_in_atmosphere:
     def __init__(self, TRD_body, atmosphere, out_int_method = 'quad'):
@@ -598,6 +742,8 @@ class TRD_in_atmosphere:
         self.out_int_method = out_int_method
 
     def current_density(self, mu, Eg, cutoff_angle, eta_ext=1, consider_nonrad = False):
+        '''calculates current density from difference between outgoing (emitted) and incoming (absorbed) photon flux.
+        if consider_nonrad is True, the eta_ext (external radiative efficiency) is used with the modified equation.'''
         Ndot_out = self.TRD_body.retrieve_Ndot_heaviside(Eg = Eg, mu = mu, cutoff_angle = cutoff_angle, int_method=self.out_int_method)
         Ndot_in = self.atm.retrieve_Ndot_heaviside(Eg = Eg, cutoff_angle = cutoff_angle)
 
@@ -610,6 +756,7 @@ class TRD_in_atmosphere:
         return J
 
     def power_density(self, mu, Eg, cutoff_angle, eta_ext=1, consider_nonrad=False):
+        '''calculates current density (J) at mu, and return J * mu'''
         J = self.current_density(mu, Eg, cutoff_angle, eta_ext, consider_nonrad)
         return J * mu
 
@@ -617,6 +764,49 @@ class TRD_in_atmosphere:
         opt_mu_dwh = minimize_scalar(self.power_density, bounds=[-0.03, 0],
                                      args=(Eg, cutoff_angle))
         return {'max power':opt_mu_dwh.fun, 'Vmpp':opt_mu_dwh.x}
+
+
+class diode_in_environment:
+    def __init__(self, emitter, environment, diode_EQE):
+        '''
+        Equivalent of existing "TRD_in_atmosphere" class, but for use with real/experimental diodes.
+        Whereas TRD_in_atmosphere has Eg, cutoff angle, radiative efficiency as arguments that can be optimized, this class uses the diode_EQE to
+        map absorption/emission across the spectrum and across angles. One instance is one particular diode (with behavior characterized by didoe_EQE),
+        with one particular temperature (emitter)
+        and in one particular environment (BB or atmospheric modelling).
+
+        :param emitter: Emitter. Should be an instance of a class with a defined 'retrieve_Ndot(EQE, mu)' function, ex: planck_law_body
+        :param environment: Environment. Should be an instance of a class with a defined 'retrieve_Ndot(EQE)' function, ex: planck_law_body or atmospheric_dataset_new
+        :param diode_EQE: diode_EQE object, corresponding to diode. EQE will determine emission and absorption from the radiative environment set.
+        '''
+        self.emitter = emitter
+        self.env = environment
+        self.diode_EQE = diode_EQE
+
+    def current_density(self, V):
+        ''' radiative is considered here.'''
+        Ndot_out = self.emitter.retrieve_Ndot(EQE=self.diode_EQE, mu=V)
+        Ndot_in = self.env.retrieve_Ndot(EQE=self.diode_EQE)
+        J = q * (Ndot_out - Ndot_in)
+        return J
+
+    def power_density(self, V):
+        J = self.current_density(V)
+        return J * V
+
+    def optimize_V(self):
+        opt_mu_dwh = minimize_scalar(self.power_density, bounds=[-0.03, 0])
+        return {'max power':opt_mu_dwh.fun, 'Vmpp':opt_mu_dwh.x}
+
+    def powerdensity_from_R(self):
+        # PD = 1/4 * Isc * Voc / AD  , eq3 in Nielsen et al 2022
+        # assuming a linear IV, R = dV/dI --> Voc = R * Isc
+        # PD = 1/4 * Isc^2 * R / AD = 1/4 * Jsc^2 * AD *R
+        Jsc = self.current_density(V=0)  # [A.m-2]
+        R = self.diode_EQE.resistance
+        AD = self.diode_EQE.area
+        print(Jsc*AD)
+        return 1/4 * Jsc**2 * AD * R  # [A.m-2]**2 * [m2] * [ohms] = [W.m-2]
 
 
 class optimize_powerdensity:
