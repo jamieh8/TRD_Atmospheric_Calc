@@ -784,10 +784,10 @@ class diode_in_environment:
         self.diode_EQE = diode_EQE
 
     def current_density(self, V):
-        ''' radiative is considered here.'''
+        ''' currently only using radiative recombination (assuming 100% radiative efficiency)'''
         Ndot_out = self.emitter.retrieve_Ndot(EQE=self.diode_EQE, mu=V)
         Ndot_in = self.env.retrieve_Ndot(EQE=self.diode_EQE)
-        J = q * (Ndot_out - Ndot_in)
+        J = 2*q*(Ndot_out - Ndot_in)
         return J
 
     def power_density(self, V):
@@ -805,7 +805,6 @@ class diode_in_environment:
         Jsc = self.current_density(V=0)  # [A.m-2]
         R = self.diode_EQE.resistance
         AD = self.diode_EQE.area
-        print(Jsc*AD)
         return 1/4 * Jsc**2 * AD * R  # [A.m-2]**2 * [m2] * [ohms] = [W.m-2]
 
 
