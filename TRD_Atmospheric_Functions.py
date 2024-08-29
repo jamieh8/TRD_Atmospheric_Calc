@@ -635,9 +635,9 @@ class diode_EQE:
 
         :param spec_type: 'heaviside' or 'measured'
         :param Eg: in [eV], used if spec_type is heaviside
-        :param spec_xs: dict containing 'spec x' and 'spec units'
+        :param spec_xs: dict containing 'spec x' and 'spec units'. spec units should be 'wavelength [um]', 'photon energy [eV]', or 'wavenumber [cm-1]'
         :param spec_EQE: array of EQE values corresponding to spectral xs, between 0 and 1. Used if spec_type is measured.
-        :param angle_type: 'lambertian with cutoff' or 'escape prob'
+        :param angle_type: 'lambertian with cutoff', 'escape probability - isotropic', or 'escape probability - Lambertian
         :param cutoff_angle: cutoff angle, in degrees
         :param betas: array of betas (emission angles), in radians
         :param escape_prob: array of escape probability values, corresponding to betas. between 0 and 1.
