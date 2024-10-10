@@ -589,9 +589,12 @@ class mathemetica_style_body:
         '''
         prefac = q**3 / (c**2 * h**3)
         # ^ prefac differs by factor of 2pi * q from the one in Mathematica code.. the one in Mathematica directly calculates current (extra q) instead of photon flux density.
-        # 2pi factor is from integration across the azimuth angle.. this Lph is in [s-1.m-2.sr-1/eV] -- the 2pi factor appears in the Ndot calculation, where we perform angualr integration [sr=rad*rad=zenith(beta) * azimuth]
-        explog = 1 - np.exp( np.log(1-EQE_Eph/(1-self.R_normal)) / np.cos(beta))
-        return  prefac * Eph**2  * np.cos(beta) * self.nL**2 * explog / ( np.exp((Eph-mu)/self.kT_eV) - 1 )
+        # 2pi factor in Mathematica is from integration across the azimuth angle.. this Lph is in [s-1.m-2.sr-1/eV] -- the 2pi factor appears in the Ndot calculation, where we perform angualr integration [sr=rad*rad=zenith(beta) * azimuth]
+        inside_log = 1-EQE_Eph/(1-self.R_normal)
+        explog = 1 - np.exp( np.log(inside_log) / np.cos(beta))
+        np.nan_to_num(explog, copy=False, nan=1)
+        Lph = prefac * Eph**2  * np.cos(beta) * self.nL**2 * explog / ( np.exp((Eph-mu)/self.kT_eV) - 1 )
+        return Lph
 
     def retrieve_Ndot(self, EQE, mu=0):
         # the integral is performed numerically over Lph
@@ -622,7 +625,7 @@ class mathemetica_style_body:
         integrated_over_Eph_beta = np.trapz(integrated_over_Eph * weight_beta, betas)
 
         Ndot = 2 * np.pi * integrated_over_Eph_beta # [s-1.m-2] . 2pi from integration over azimuth angle
-
+        # plt.show()
         return Ndot
 
 
@@ -803,6 +806,7 @@ class diode_in_environment:
         # assuming a linear IV, R = dV/dI --> Voc = R * Isc
         # PD = 1/4 * Isc^2 * R / AD = 1/4 * Jsc^2 * AD *R
         Jsc = self.current_density(V=0)  # [A.m-2]
+        print(Jsc)
         R = self.diode_EQE.resistance
         AD = self.diode_EQE.area
         return 1/4 * Jsc**2 * AD * R  # [A.m-2]**2 * [m2] * [ohms] = [W.m-2]

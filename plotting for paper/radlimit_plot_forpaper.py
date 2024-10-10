@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+import seaborn as sns
 from TRD_Atmospheric_Functions import *
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
@@ -14,6 +14,8 @@ label_fontsize=14
 os.chdir('..')  # 'reverse' out of "plotting for paper" folder
 
 comparison_lst = []
+
+
 
 # comparing new datasets:
 angle_array = [0]
@@ -54,12 +56,13 @@ for Ts in Tsets:
 comparison_lst[-1].update({'label position':'below'})  # required for Tatm Telfer high, to accomodate Telfer mid
 
 
-custom_muopt_legend = [Line2D([0],[0], color = 'k', linestyle='solid', label='LBLTRM modelling'),
-                       Line2D([0],[0], color = 'k', linestyle='dashed', label='Effective temperature'),
-                       Patch(facecolor='darkorange', label='Telfer low'),
-                       Patch(facecolor='darkviolet', label='Telfer mid'),
-                       Patch(facecolor='mediumseagreen', label='Telfer high'),
-                       Patch(facecolor='black', label='3K BB')]
+colors_legend =  [Patch(facecolor='darkorange', label='Telfer low, PD'),
+                    Patch(facecolor='darkviolet', label='Telfer mid, PD'),
+                    Patch(facecolor='mediumseagreen', label='Telfer low, PD'),
+                    Patch(facecolor='black', label='3K BB, PD'),
+                    Patch(facecolor='lightgrey', label='Telfer low, $F_{ph}$')]
+line_types_legend = [Line2D([0],[0], color = 'dimgrey', linestyle='solid', label='with LBLTRM modelling'),
+                    Line2D([0],[0], color = 'dimgrey', linestyle='dashed', label='with effective sky temperature')]
 
 alg_powell = pg.scipy_optimize(method='Powell', tol=1e-5)
 alg_de = pg.de(gen=50, ftol=1e-5)
@@ -67,6 +70,7 @@ alg_de = pg.de(gen=50, ftol=1e-5)
 
 fig, axs = plt.subplots(1, 2, width_ratios=[2.4,1])
 fig.subplots_adjust(left=0.073, right=0.973, wspace=0.45)
+
 
 ref_dataset = atmospheric_dataset_new('low', 'telfer', Tskin=301.56, date='24oct')
 downwelling_photflux = ref_dataset.retrieve_spectral_array(yvals='s-1.m-2', xvals='eV',
@@ -113,7 +117,13 @@ axs[0].set_xlabel('Bandgap, E$_\mathrm{g}$ [eV]', fontsize=label_fontsize)
 axs[0].set_ylabel('Max Power Density [W.m$^{-2}$]', fontsize=label_fontsize)
 
 
-axs[0].legend(handles=custom_muopt_legend, loc='upper right')
+# axs[0].legend(handles=custom_muopt_legend, loc='upper right')
+legend1 = plt.legend(handles=colors_legend, loc='lower left', fontsize=label_fontsize)
+legend2 = plt.legend(handles=line_types_legend, loc='upper right', fontsize=label_fontsize)
+# axs[0].add_artist(legend1)
+# axs[0].add_artist(legend2)
+plt.gca().add_artist(legend1)
+plt.gca().add_artist(legend2)
 
 wl_ax = add_wl_ticks(axs[0], fontsize=label_fontsize)
 axs[0].set_xlim([0.009,0.31])

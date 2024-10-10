@@ -29,7 +29,7 @@ datasets = get_dataset_list()[0:3]
 set_font_opensans()
 label_fontsize = 13
 os.chdir('..')  # 'reverse' out of "plotting for paper" folder
-plot_downwelling_separately = True
+plot_downwelling_separately = False
 
 if plot_downwelling_separately:
     fig = plt.figure(figsize=(8, 7))
@@ -90,7 +90,10 @@ map_axs[0].text(x=-180+5,y=-90+3,s='JAN 0000 UTC', ha='left', va='bottom', color
 map_axs[1].text(x=-180+5,y=-90+3,s='JUNE 0000 UTC', ha='left', va='bottom', color='white', bbox = {'color':'black', 'pad':1})
 
 fig.subplots_adjust(left=0.05, right=0.95, bottom=0.15, top=0.9)
-cb_ax = fig.add_axes([0.05, 0.1, 0.47, 0.02])  # x0, y0, width, height
+if plot_downwelling_separately:
+    cb_ax = fig.add_axes([0.05, 0.1, 0.47, 0.02])  # x0, y0, width, height
+else:
+    cb_ax = fig.add_axes([0.05, 0.1, 0.25, 0.02])  # x0, y0, width, height
 
 cbar = fig.colorbar(hmap, cax=cb_ax, orientation='horizontal')
 cbar.ax.set_xlabel('Decadal mean TCWV [mm]', fontsize=label_fontsize)
@@ -147,8 +150,8 @@ ax_dwf.set_ylabel('Spectral Photon Flux Density, F$_\mathrm{ph}$ [s$^{-1}$.m$^{-
 # ax.set_ylabel('Spectral Irradiance, F$_e$ [W.cm$^{-2}$/cm$^{-1}$]')
 ax_dwf.set_xlabel('Photon Energy, E$_\mathrm{ph}$ [eV]', fontsize=label_fontsize)
 ax_dwf.legend(loc='lower left', fontsize=label_fontsize)
-ax_dwf.set_xlim([0.01, 0.31])
-ax_dwf.set_ylim([1e19, 1e24])
+ax_dwf.set_xlim([0.01, 0.4])
+ax_dwf.set_ylim([1e17, 1e24])
 ax_dwf.set_yscale('log')
 
 wl_ax = add_wl_ticks(ax_dwf, fontsize=label_fontsize)
