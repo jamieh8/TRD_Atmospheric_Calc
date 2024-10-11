@@ -1,6 +1,6 @@
 from TRD_Atmospheric_Functions import *
 import matplotlib.pyplot as plt
-from scipy.interpolate import RegularGridInterpolator
+from scipy.interpolate import RegularGridInterpolator, interpn
 
 
 # ----- Import EQE and escape probability arrays -----
@@ -15,8 +15,8 @@ wavelengths = data[1:,0] # in [nm]
 Ts = data[0,1:]  # [K]
 EQEs = data[1:,1:]/100
 
-# set up interpolator so that EQE can be retrieved at arbirarity temp
-EQE_interpolator = RegularGridInterpolator((wavelengths, Ts), EQEs, bounds_error=False, fill_value=None)
+# set up interpolator so that EQE can be retrieved at arbitrary temp
+# EQE_interpolator = RegularGridInterpolator((wavelengths, Ts), EQEs, bounds_error=False, fill_value=None)
 
 # --- (uncomment to plot the 2D EQE) ---
 # fig, hEQE_ax = plt.subplots(1,1,layout='tight')
@@ -40,25 +40,30 @@ K_spacing = 1
 diode_temps = np.arange(min(Ts), max(Ts), K_spacing)
 env_temps = np.arange(100, 300, K_spacing)
 
-# convert units, [nm]->[um]->[eV]
-# not required, but the integration happens over Eph so doing this once, up front, speeds things up slightly
-Ephs = convert_from(wavelengths*1e-3, units_in='wavelength [um]', units_out='photon energy [eV]')
-
 fn_results = f'Jsc_{csv_name}_{K_spacing}Kspacing.csv'
 filepath_results = r'C:\Users\z5426944\OneDrive - UNSW\Documents\Thermoradiative Diode\Temp dependent EQE\\' + fn_results
-plot_from_file_only = True
-
+plot_from_file_only = False
 
 if plot_from_file_only:
     # don't calculate, just load in results
     load_dat = np.loadtxt(filepath_results, skiprows=1, delimiter=',')
     currents = load_dat[:,1:]
 else:
+    # convert units, [nm]->[um]->[eV]
+    # not required, but the integration happens over Eph so doing this once, up front, speeds things up slightly
+    Ephs = convert_from(wavelengths * 1e-3, units_in='wavelength [um]', units_out='photon energy [eV]')
+
     # calculate results
-    currents = [], []
+    currents = []
     for diode_T in diode_temps:
         # retrieve interpolated diode EQE at this temperature
-        diodeEQE_atT = EQE_interpolator((wavelengths, diode_T))
+
+        # old interpolator
+        # diodeEQE_atT = EQE_interpolator((wavelengths, diode_T))
+
+        # internative interpolator
+        diodeEQE_atT = interpn((wavelengths,Ts), values=EQEs, xi=(wavelengths, diode_T))
+
         np.nan_to_num(diodeEQE_atT, copy=False)
 
         # set up diode_EQE object using interpolated EQE and escape probability (dynamic resistance could be added here for power calcs)
@@ -68,6 +73,7 @@ else:
         emitter_b = mathemetica_style_body(T=diode_T)  # define emitter temperature (emission profile)
 
         row=[]
+
         for env_T in env_temps:
             env_b = mathemetica_style_body(T=env_T)  # define environment temperature
             die = diode_in_environment(emitter=emitter_b, environment=env_b, diode_EQE = diode)  # combine
